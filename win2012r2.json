@@ -41,6 +41,9 @@
           "./windows/common/ultradefrag.ps1",
           "./windows/common/sdelete.ps1"
         ]
+      },
+      {
+        "type": "ansible"
       }
     ],
     "post-processors": [
