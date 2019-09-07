@@ -14,8 +14,8 @@ if (!(Test-Path -Path "$temp")) {
 $msiversion = Get-MSIProperty -Property ProductVersion -Path $temp\teams_x64.msi | Select-Object -ExpandProperty Value
 
 if (!(Test-Path -Path $InstallerSharePath\$msiversion)) {
-    @("x86","x64") | ForEach-Object { New-Item -Path "$InstallerSharePath\$msiversion\$_" -ItemType Directory -Force }
-    @("x86","x64") | ForEach-Object { Copy-Item -Path "$temp\teams_$_.msi" -Destination "$InstallerSharePath\$msiversion\$_\teams_$_.msi" }
+    $arch.Values | ForEach-Object { New-Item -Path "$InstallerSharePath\$msiversion\$_" -ItemType Directory -Force }
+    $arch.Values | ForEach-Object { Copy-Item -Path "$temp\teams_$_.msi" -Destination "$InstallerSharePath\$msiversion\$_\teams_$_.msi" }
 }
 
 Start-Sleep -Seconds 10
