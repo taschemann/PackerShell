@@ -1,24 +1,22 @@
 #!/usr/bin/env pwsh
+# Author: Thomas Aschemann
 # INSTALL PSMSI
 
-#$InstallerSharePath = "\\itsys-sccm.ad.siu.edu\Software$\Microsoft\Teams"
-#$temp = "$InstallerSharePath\temp"
-
-$InstallerSharePath = "$env:USERPROFILE\Downloads"
+$InstallerSharePath = "\\itsys-sccm.ad.siu.edu\Software$\Microsoft\Teams"
 $temp = "$InstallerSharePath\temp"
+$arch = @{"32" = "x86"; "64" = "x64"}
 
 if (!(Test-Path -Path "$temp")) {
     New-Item -Path "$temp" -ItemType Directory -Force
-    Invoke-WebRequest -Uri "https://aka.ms/teams64bitmsi" -OutFile "$temp\teams_x64.msi"
-    Invoke-WebRequest -Uri "https://aka.ms/teams32bitmsi" -OutFile "$temp\teams_x86.msi"
+    $arch.keys | ForEach-Object { Invoke-WebRequest -Uri $("https://aka.ms/teams{0}bitmsi" -f $_) -OutFile $("$temp\teams_{0}.msi" -f $arch[$_]) }
 }
 
 $msiversion = Get-MSIProperty -Property ProductVersion -Path $temp\teams_x64.msi | Select-Object -ExpandProperty Value
 
 if (!(Test-Path -Path $InstallerSharePath\$msiversion)) {
     @("x86","x64") | ForEach-Object { New-Item -Path "$InstallerSharePath\$msiversion\$_" -ItemType Directory -Force }
-    Copy-Item -Path "$temp\teams_x64.msi" -Destination "$InstallerSharePath\$msiversion\x64\teams_x64.msi"
-    Copy-Item -Path "$temp\teams_x86.msi" -Destination "$InstallerSharePath\$msiversion\x86\teams_x86.msi"
+    @("x86","x64") | ForEach-Object { Copy-Item -Path "$temp\teams_$_.msi" -Destination "$InstallerSharePath\$msiversion\$_\teams_$_.msi" }
 }
 
+Start-Sleep -Seconds 10
 Remove-Item -Path "$temp" -Force -Recurse
