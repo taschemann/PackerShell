@@ -1,11 +1,27 @@
 {
   "provisioners": [
+    {
+      "type": "powershell",
+      "elevated_user":"vagrant",
+      "elevated_password":"vagrant",
+      "scripts": [
+        "../shared/pwsh/install-7zip.ps1",
+        "../shared/pwsh/install-chef.ps1",
+        "../shared/pwsh/compile-dotnet-assemblies.ps1",
+        "../shared/pwsh/cleanup.ps1",
+        "../shared/pwsh/ultradefrag.ps1",
+        "../shared/pwsh/sdelete.ps1"
+      ]
+    },
+    {
+      "type": "ansible"
+    }
   ],
     "builders": [
       {
         "type": "virtualbox-iso",
         "vm_name": "packer-windows-2016-x86_64",
-        "headless": false,
+        "headless": true,
         "disk_size": 61440,
         "floppy_files": [
           "scripts/autounattend.xml"
@@ -17,6 +33,7 @@
         "iso_checksum": "47919CE8B4993F531CA1FA3F85941F4A72B47EBAA4D3A321FECF83CA9D17E6B8",
         "iso_interface": "sata",
         "vboxmanage": [
+          ["modifyvm", "{{.Name}}", "--firmware", "EFI"],
           ["modifyvm", "{{.Name}}", "--memory", "2048"],
           ["modifyvm", "{{.Name}}", "--cpus", "2"]
         ],
@@ -31,5 +48,10 @@
       }
     ],
     "post-processors": [
+      {
+        "type": "vagrant",
+        "keep_input_artifact": false,
+        "output": "{{.Provider}}_windows-2016.box"
+      }
     ]
   }
