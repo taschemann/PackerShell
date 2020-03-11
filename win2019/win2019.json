@@ -1,0 +1,57 @@
+{
+  "provisioners": [
+    {
+      "type": "powershell",
+      "elevated_user":"vagrant",
+      "elevated_password":"vagrant",
+      "scripts": [
+        "./windows/common/install-7zip.ps1",
+        "./windows/common/install-chef.ps1",
+        "./windows/common/compile-dotnet-assemblies.ps1",
+        "./windows/common/cleanup.ps1",
+        "./windows/common/ultradefrag.ps1",
+        "./windows/common/sdelete.ps1"
+      ]
+    },
+    {
+      "type": "ansible"
+    }
+  ],
+    "builders": [
+      {
+        "type": "virtualbox-iso",
+        "vm_name": "packer-windows-2019-x86_64",
+        "headless": true,
+        "disk_size": 61440,
+        "floppy_files": [
+          "scripts/autounattend.xml"
+        ],
+        "iso_urls": [
+          "Windows-Server-2019.iso"
+        ],
+        "iso_checksum_type": "sha256",
+        "iso_checksum": "2DBAF2893AE1547F8C8849C8E1D709D969C4E37C6D9D2E47CC0F7B69218D22F4",
+        "iso_interface": "sata",
+        "vboxmanage": [
+          ["modifyvm", "{{.Name}}", "--firmware", "EFI"],
+          ["modifyvm", "{{.Name}}", "--memory", "2048"],
+          ["modifyvm", "{{.Name}}", "--cpus", "2"]
+        ],
+        "guest_os_type": "Windows2016_64",
+        "communicator":"winrm",
+        "winrm_username": "vagrant",
+        "winrm_password": "vagrant",
+        "winrm_timeout" : "4h",
+        "guest_additions_path": "../shared/VBoxGuestAdditions_{{.Version}}.iso",
+        "virtualbox_version_file": ".vbox_version",
+        "shutdown_command": "f:\\run-sysprep.cmd"
+      }
+    ],
+    "post-processors": [
+      {
+        "type": "vagrant",
+        "keep_input_artifact": false,
+        "output": "{{.Provider}}_windows-2019.box"
+      }
+    ]
+  }
