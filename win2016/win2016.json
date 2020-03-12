@@ -31,5 +31,6 @@
       }
     ],
     "post-processors": [
+      "vagrant"
     ]
   }
