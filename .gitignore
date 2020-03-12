@@ -2,3 +2,5 @@
 */output-virtualbox-iso/*
 *.iso
 */Windows-Server-2016/*
+*/.vagrant/*
+*.box
