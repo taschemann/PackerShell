@@ -61,6 +61,9 @@
     }
   ],
   "post-processors": [
-    "vagrant"
+    {
+      "type": "vagrant",
+      "output": "./builds/virtualbox-centos7.box"
+    }
   ]
 }
