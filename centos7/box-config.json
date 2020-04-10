@@ -31,7 +31,7 @@
       "headless": true,
       "http_directory": "http",
       "iso_urls": [
-        "CentOS-7-x86_64-Minimal-1908.iso",
+        "F:\\iso\\CentOS-7-x86_64-Minimal-1908.iso",
         "http://mirrors.mit.edu/centos/7/isos/x86_64/CentOS-7-x86_64-Minimal-1908.iso"
       ],
       "iso_checksum_type": "sha256",
