@@ -1,0 +1,63 @@
+{
+  "variables": {
+    "vm_name": "packer-windows-2019-x86_64",
+    "cpu": "4",
+    "ram_size": "8192",
+    "disk_size": "40000",
+    "iso_url": "Windows-Server-2019.iso",
+    "iso_checksum_type": "sha256",
+    "iso_checksum": "61A391F0DC98E703DA674DF3C984AC2EB432FF757F949385360E68476C920478",
+    "communicator": "winrm",
+    "username": "itadm",
+    "password": "itadm"
+  },
+  
+  "builders": [
+    {
+      "type": "virtualbox-iso",
+      "vm_name": "{{user `vm_name`}}",
+      "headless": false,
+      "disk_size": "{{user `disk_size`}}",
+      "floppy_files": [
+        "scripts/serverstandardcore/autounattend.xml"
+      ],
+      "iso_urls": "{{user `iso_url`}}",
+      "iso_checksum_type": "{{user `iso_checksum_type`}}",
+      "iso_checksum": "{{user `iso_checksum`}}",
+      "iso_interface": "sata",
+      "vboxmanage": [
+        ["modifyvm", "{{.Name}}", "--memory", "{{user `ram_size`}}"],
+        ["modifyvm", "{{.Name}}", "--cpus", "{{user `cpu`}}"]
+      ],
+      "guest_os_type": "Windows2016_64",
+      "communicator": "{{user `communicator`}}",
+      "winrm_username": "{{user `username`}}",
+      "winrm_password": "{{user `password`}}",
+      "winrm_timeout" : "4h",
+      "guest_additions_path": "../shared/VBoxGuestAdditions_{{.Version}}.iso",
+      "virtualbox_version_file": ".vbox_version",
+      "shutdown_command": "scripts/run-sysprep.cmd"
+    },
+
+    {
+      "type": "hyperv-iso",
+      "vm_name": "{{user `vm_name`}}",
+      "disK_size": "{{user `disk_size`}}",
+      "cpus": "{{user `cpu`}}",
+      "memory": "{{user `ram_size`}}",
+      "floppy_files": [
+        "scripts/serverstandardcore/autounattend.xml"
+      ],
+      "generation": "1",
+      "headless": false,
+      "iso_urls": "{{user `iso_url`}}",
+      "iso_checksum_type": "{{user `iso_checksum_type`}}",
+      "iso_checksum": "{{user `iso_checksum`}}",
+      "communicator": "{{user `communicator`}}",
+      "winrm_username": "{{user `username`}}",
+      "winrm_password": "{{user `password`}}",
+      "winrm_timeout" : "4h",
+      "shutdown_command": "scripts/run-sysprep.cmd"
+    }
+  ]
+}
