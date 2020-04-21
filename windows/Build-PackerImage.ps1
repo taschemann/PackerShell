@@ -37,6 +37,11 @@ switch ($OSName) {
             'standardcore' { $unattend_path = ".\unattend\$Firmware\serverstandardcore\autounattend.xml" }
             'datacentercore' { $unattend_path = ".\unattend\$Firmware\serverdatacentercore\autounattend.xml" }
         }
+
+        if ($BuildType -eq "all") {
+            $BuildType = @("hyperv-iso","vSphere-iso")
+        }
+
         $packer_data = @{
             os_name = "$($_)"
             vm_name = "packer-$($_)_$(Get-Date -UFormat "%d%b%Y_%H%M")"
