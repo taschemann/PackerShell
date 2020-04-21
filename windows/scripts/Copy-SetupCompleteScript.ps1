@@ -1,0 +1,1 @@
+Copy-Item -Path "A:\SetupComplete.cmd" -Destination "C:\Windows\Setup\Scripts"
