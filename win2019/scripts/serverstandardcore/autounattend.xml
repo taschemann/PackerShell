@@ -151,7 +151,7 @@
             <OEMInformation>
                 <HelpCustomized>false</HelpCustomized>
             </OEMInformation>
-            <ComputerName>vagrant-2019</ComputerName>
+            <ComputerName>dev-win2019</ComputerName>
             <TimeZone>Coordinated Universal Time</TimeZone>
             <RegisteredOwner />
         </component>
