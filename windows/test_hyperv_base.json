@@ -22,7 +22,14 @@
           "boot_command": [
             "setup.exe /ConfigFile:http://{{ .HTTPIP }}:{{ .HTTPPort }}/SetupConfig.ini"
           ],
+          "floppy_files": [
+            "scripts/serverstandard/autounattend.xml",
+            "scripts/ConfigureRemotingForAnsible.ps1",
+            "scripts/run-sysprep.cmd",
+            "../shared/windows/SetupComplete.cmd"
+          ],
           "http_directory": "scripts",
+          "generation": "1",
           "headless": false,
           "iso_urls": "{{user `iso_url`}}",
           "iso_checksum_type": "{{user `iso_checksum_type`}}",
