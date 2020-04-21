@@ -4,13 +4,21 @@
     "cpu": "4",
     "ram_size": "8192",
     "disk_size": "40000",
-    "iso_urls": "Windows-Server-2019.iso",
+    "iso_url": "Windows-Server-2019.iso",
     "iso_checksum_type": "sha256",
-    "iso_checksum": "2DBAF2893AE1547F8C8849C8E1D709D969C4E37C6D9D2E47CC0F7B69218D22F4",
+    "iso_checksum": "61A391F0DC98E703DA674DF3C984AC2EB432FF757F949385360E68476C920478",
     "communicator": "winrm",
-    "username": "vagrant",
-    "password": "vagrant"
+    "username": "itadm",
+    "password": "itadm"
   },
+  
+
+  "provisioners": [
+    {
+      "type": "powershell",
+      "script": "../shared/powershell/Install-7zip.ps1"
+    }
+  ],
 
   "builders": [
     {
@@ -57,7 +65,7 @@
       "winrm_username": "{{user `username`}}",
       "winrm_password": "{{user `password`}}",
       "winrm_timeout" : "4h",
-      "shutdown_command": "scripts/run-sysprep.cmd"
+      "shutdown_command": "f:\\run-sysprep.cmd"
     }
   ]
 }
