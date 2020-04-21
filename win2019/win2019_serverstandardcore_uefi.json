@@ -34,6 +34,39 @@
       "winrm_timeout" : "4h",
       "enable_secure_boot": true,
       "shutdown_command": "f:\\run-sysprep.cmd"
+    },
+    {
+      "type": "vsphere-iso",
+      "vcenter_server": "it-vcenter.siu.edu",
+      "datacenter": "WHAM",
+      "insecure_connection": true,
+      "CPUs": "1",
+      "cpu_cores": "{{user `cpu`}}",
+      "RAM": "{{user `ram_size`}}",
+
+      "vm_name": "{{user `vm_name`}}",
+      "folder": "",
+      "cluster": "",
+      "host": "",
+      "resource_pool": "",
+      "datastore": "",
+
+      "iso_urls": "{{user `iso_url`}}",
+      "iso_checksum_type": "{{user `iso_checksum_type`}}",
+      "iso_checksum": "{{user `iso_checksum`}}",
+
+      "disK_size": "{{user `disk_size`}}",
+
+      "floppy_files": [
+        "scripts/uefi/serverstandardcore/autounattend.xml"
+      ],
+
+      "communicator": "{{user `communicator`}}",
+      "winrm_username": "{{user `username`}}",
+      "winrm_password": "{{user `password`}}",
+      "winrm_timeout" : "4h",
+
+      "shutdown_command": "f:\\run-sysprep.cmd"
     }
   ]
 }
