@@ -1,23 +1,56 @@
 [CmdletBinding()]
 param (
-    [Parameter()]
+    ##
+    [Parameter(ParameterSetName="HyperV")]
+    [Parameter(ParameterSetName="vSphere")]
     [string] $VMName = "packer-winserver_$(Get-Date -UFormat "%d%b%Y_%H%M")",
-    [Parameter(Mandatory)]
-    [ValidateSet("hyperv-iso","vSphere-iso","all")]
-    [string] $BuildType = "hyperv-iso",
-    [Parameter(Mandatory)]
-    [ValidateSet("win2016","win2019")]
-    [string] $OSName,
-    [Parameter()]
+    ##
+    [Parameter(ParameterSetName="HyperV", Position=0)]
+    [switch] $BuildHyperV,
+    ##
+    [Parameter(ParameterSetName="vSphere", Position=0)]
+    [switch] $BuildvSphere,
+    ##
+    [Parameter(ParameterSetName="vSphere", Position=0)]
+    [switch] $BuildAll,
+    ##
+    [Parameter(Mandatory, ParameterSetName="HyperV")]
+    [Parameter(Mandatory, ParameterSetName="vSphere")]
+    [ValidateSet("win2019")]
+    [string[]] $OSName,
+    ##
+    [Parameter(Mandatory, ParameterSetName="HyperV")]
+    [Parameter(Mandatory, ParameterSetName="vSphere")]
     [string[]] $IsoUrl,
-    [Parameter(Mandatory)]
-    [ValidateSet("bios","uefi")]
-    [string] $Firmware,
-    [Parameter(Mandatory)]
-    [ValidateSet("standard","datacenter","standardcore","datacentercore")]
-    [string] $OSSKU,
+    ##
+    [Parameter(Mandatory, ParameterSetName="HyperV")]
+    [ValidateSet("BIOS","UEFI")]
+    [string] $Firmware = "BIOS",
+    ##
+    [Parameter(ParameterSetName="HyperV")]
+    [Parameter(ParameterSetName="vSphere")]
+    [ValidateSet("SERVERSTANDARD","SERVERSTANDARDCORE","SERVERDATACENTER","SERVERDATACENTERCORE")]
+    [string] $OSSKU = "SERVERSTANDARD",
+    ##
+    [Parameter(ParameterSetName="HyperV")]
+    [Parameter(ParameterSetName="vSphere")]
+    [string] $OutputPath = ".\output",
+    ##
     [Parameter()]
-    [string] $OutputPath = ".\output"
+    [ValidateSet("BuildBaseImage","BuildUpdatedBaseImage","CleanupBaseImage")]
+    [string] $BuildStep,
+    ##
+    [Parameter(ParameterSetName="HyperV")]
+    [switch] $EnableSecureBoot,
+    ##
+    [Parameter()]
+    [int] $ProcessorCount = 2,
+    ##
+    [Parameter()]
+    [int] $MemoryInMegabytes = 2048,
+    ##
+    [Parameter()]
+    [int] $DiskSizeInMegabytes = 25000
 )
 
 if (Test-Path -Path $OutputPath) {
@@ -25,13 +58,6 @@ if (Test-Path -Path $OutputPath) {
 }
 
 switch ($OSName) {
-    'win2016' { 
-        $packer_data = @{
-            os_name = "$_"
-            vm_name = "packer-$($_)_$(Get-Date -UFormat "%d%b%Y_%H%M")"
-            build_type = "$BuildType"
-        }
-    }
 
     'win2019' {
         switch ($OSSKU) {
@@ -41,38 +67,35 @@ switch ($OSName) {
             'datacentercore' { $unattend_path = ".\unattend\$Firmware\serverdatacentercore\autounattend.xml" }
         }
 
-        if ($BuildType -eq "all") {
-            $BuildType = @("hyperv-iso","vSphere-iso")
-        }
-
         $packer_data = @{
             os_name = "$($_)"
-            vm_name = "packer-$($_)_$(Get-Date -UFormat "%d%b%Y_%H%M")"
+            vm_name = "$VMName"
             build_type = "$BuildType"
             iso_url = "$IsoUrl"
             unattend_file = "$unattend_path"
-            cpu = 4
-            ram_size = 8192
-            disk_size = 40000
+            cpu = $ProcessorCount
+            ram_size = $MemoryInMegabytes
+            disk_size = $DiskSizeInMegabytes
             output_directory = "$OutputPath"
         }
-
-        $packer_data
     }
 }
 
 # Run the build in multiple steps to prevent loss of time in case a build fails somewhere in the middle.
 
 # Build Base Image
-#Write-Host "build -var os_name=$($packer_data.os_name) -var vm_name=$($packer_data.vm_name) `
-#    -var iso_url=$($packer_data.iso_url) -var `"unattend_file=$($packer_data.unattend_file)`" -var cpu=$($packer_data.cpu) `
-#    -var ram_size=$($packer_data.ram_size) -var disk_size=$($packer_data.disk_size) -var `"output_directory=$($packer_data.output_directory)`" `
-#    .\01_winserver_base.json -only=$BuildType" 
-
-Start-Process -FilePath 'packer.exe' -ArgumentList "build -var `"os_name=$($packer_data.os_name)`" -var `"vm_name=$($packer_data.vm_name)`" -var `"iso_url=$($packer_data.iso_url)`" -var `"unattend_file=$($packer_data.unattend_file)`" -var `"cpu=$($packer_data.cpu)`" -var `"ram_size=$($packer_data.ram_size)`" -var `"disk_size=$($packer_data.disk_size)`" -var `"output_directory=$($packer_data.output_directory)`" .\01_winserver_base.json" -Wait -NoNewWindow
-
+if (((-not $BuildStep) -or ($BuildStep -eq "BuildBaseImage")) -and ($BuildHyperV) ) {
+    if ($Firmware -eq "bios") {
+        Start-Process -FilePath 'packer.exe' -ArgumentList "build -only=hyperv-bios -var `"os_name=$($packer_data.os_name)`" -var `"vm_name=$($packer_data.vm_name)`" -var `"iso_url=$($packer_data.iso_url)`" -var `"unattend_file=$($packer_data.unattend_file)`" -var `"cpu=$($packer_data.cpu)`" -var `"ram_size=$($packer_data.ram_size)`" -var `"disk_size=$($packer_data.disk_size)`" -var `"output_directory=$($packer_data.output_directory)`" .\01_winserver_base.json" -Wait -NoNewWindow   
+    } elseif ($Firmware -eq "uefi") {
+        Start-Process -FilePath 'packer.exe' -ArgumentList "build -only=hyperv-uefi -var `"os_name=$($packer_data.os_name)`" -var `"vm_name=$($packer_data.vm_name)`" -var `"iso_url=$($packer_data.iso_url)`" -var `"unattend_file=$($packer_data.unattend_file)`" -var `"cpu=$($packer_data.cpu)`" -var `"ram_size=$($packer_data.ram_size)`" -var `"disk_size=$($packer_data.disk_size)`" -var `"output_directory=$($packer_data.output_directory)`" .\01_winserver_base.json" -Wait -NoNewWindow
+    }
+}
 # Build Image with Updates
-#Start-Process -FilePath 'packer.exe' -ArgumentList "build -var `"os_name=$($packer_data.os_name)`" .\02_winserver_updates.json" -Wait -NoNewWindow
-
-# CLeanup Updated Image
-#Start-Process -FilePath 'packer.exe' -ArgumentList "build -var `"os_name=$($packer_data.os_name)`" .\03_winserver_cleanup.json" -Wait -NoNewWindow
+#if (($null -eq $BuildStep) -or ($BuildStep -eq "BuildUpdatedBaseImage")) {
+#    Start-Process -FilePath 'packer.exe' -ArgumentList "build -var `"os_name=$($packer_data.os_name)`" .\02_winserver_updates.json" -Wait -NoNewWindow
+#}
+# Cleanup Updated Image
+#if (($null -eq $BuildStep) -or ($BuildStep -eq "CleanupBaseImage")) {
+#    Start-Process -FilePath 'packer.exe' -ArgumentList "build -var `"os_name=$($packer_data.os_name)`" .\03_winserver_cleanup.json" -Wait -NoNewWindow
+#}
