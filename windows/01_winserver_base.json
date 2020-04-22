@@ -1,23 +1,26 @@
 {
     "variables": {
+      "builder_name": "",
       "os_name": "",
       "vm_name": "",
       "build_type": "",
-      "cpu": "1",
-      "ram_size": "1024",
-      "disk_size": "40000",
-      "iso_url": "Windows-Server-2019.iso",
+      "cpu": "",
+      "ram_size": "",
+      "disk_size": "",
+      "iso_url": "",
       "iso_checksum_type": "sha256",
       "iso_checksum": "61A391F0DC98E703DA674DF3C984AC2EB432FF757F949385360E68476C920478",
       "communicator": "winrm",
       "username": "itadm",
       "password": "itadm",
       "output_directory": "",
-      "unattend_file": ""
+      "unattend_file": "",
+      "skip_export": ""
     },
 
     "builders": [
         {
+          "name": "hyperv-bios",
           "type": "hyperv-iso",
           "vm_name": "{{user `vm_name`}}",
           "disk_size": "{{user `disk_size`}}",
@@ -31,6 +34,7 @@
             "scripts/SetupComplete.cmd"
           ],
           "headless": false,
+          "generation": "1",
           "iso_urls": "{{user `iso_url`}}",
           "iso_checksum_type": "{{user `iso_checksum_type`}}",
           "iso_checksum": "{{user `iso_checksum`}}",
@@ -39,7 +43,33 @@
           "winrm_password": "{{user `password`}}",
           "winrm_timeout" : "4h",
           "shutdown_command": "a:\\run-sysprep.cmd",
-          "output_directory": "{{user `output_directory`}}"
+          "output_directory": "{{user `output_directory`}}",
+          "skip_export": "{{user `skip_export`}}"
+        },
+        {
+          "name": "hyperv-uefi",
+          "type": "hyperv-iso",
+          "vm_name": "{{user `vm_name`}}",
+          "disk_size": "{{user `disk_size`}}",
+          "cpus": "{{user `cpu`}}",
+          "memory": "{{user `ram_size`}}",
+          "http_directory": "scripts",
+          "boot_command": [
+            "a<enter><wait>a<enter><wait>a<enter><wait>a<enter>"
+          ],
+          "headless": false,
+          "generation": "2",
+          "iso_urls": "{{user `iso_url`}}",
+          "iso_checksum_type": "{{user `iso_checksum_type`}}",
+          "iso_checksum": "{{user `iso_checksum`}}",
+          "communicator": "{{user `communicator`}}",
+          "winrm_username": "{{user `username`}}",
+          "winrm_password": "{{user `password`}}",
+          "winrm_timeout" : "4h",
+          "shutdown_command": "a:\\run-sysprep.cmd",
+          "output_directory": "{{user `output_directory`}}",
+          "skip_export": "{{user `skip_export`}}",
+          "enable_secure_boot": true
         }
       ]
 }
