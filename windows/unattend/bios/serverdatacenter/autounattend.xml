@@ -12,7 +12,7 @@
             <UserLocale>en-US</UserLocale>
         </component>
         <component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-            <!-- Start Non UEFI 
+            <!-- Start Non UEFI -->
             <DiskConfiguration>
                 <Disk wcm:action="add">
                     <CreatePartitions>
@@ -52,7 +52,7 @@
                     <InstallFrom>
                         <MetaData wcm:action="add">
                             <Key>/IMAGE/NAME </Key>
-                            <Value>Windows Server 2019 SERVERSTANDARD</Value>
+                            <Value>Windows Server 2019 SERVERDATACENTER</Value>
                         </MetaData>
                     </InstallFrom>
                     <InstallTo>
@@ -61,8 +61,8 @@
                     </InstallTo>
                 </OSImage>
             </ImageInstall>
-             Finish Non UEFI -->
-            <!-- Start UEFI compatible -->
+            <!-- Finish Non UEFI -->
+            <!-- Start UEFI compatible
             <DiskConfiguration>
                 <Disk wcm:action="add">
                     <CreatePartitions>
@@ -122,7 +122,7 @@
                     <InstallFrom>
                         <MetaData wcm:action="add">
                             <Key>/IMAGE/NAME </Key>
-                            <Value>Windows Server 2019 SERVERSTANDARD</Value>
+                            <Value>Windows Server 2012 R2 SERVERSTANDARD</Value>
                         </MetaData>
                     </InstallFrom>
                     <InstallTo>
@@ -131,7 +131,7 @@
                     </InstallTo>
                 </OSImage>
             </ImageInstall>
-            <!-- Finish UEFI compatible -->
+            Finish UEFI compatible -->
             <UserData>
                 <!-- Product Key from http://technet.microsoft.com/en-us/library/jj612867.aspx -->
                 <ProductKey>
@@ -151,7 +151,7 @@
             <OEMInformation>
                 <HelpCustomized>false</HelpCustomized>
             </OEMInformation>
-            <ComputerName>dev-win2019efi</ComputerName>
+            <ComputerName>dev-win2019bios</ComputerName>
             <TimeZone>Coordinated Universal Time</TimeZone>
             <RegisteredOwner />
         </component>
@@ -180,10 +180,16 @@
                 <Username>itadm</Username>
             </AutoLogon>
             <FirstLogonCommands>
-                <SynchronousCommand wcm:action="add">
-                    <CommandLine>cmd.exe /c winrm quickconfig -q</CommandLine>
-                    <Description>winrm quickconfig -q</Description>
+               <SynchronousCommand wcm:action="add">
+                    <CommandLine>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -Command "Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Force"</CommandLine>
+                    <Description>Unrestricted Execution Policy</Description>
                     <Order>3</Order>
+                    <RequiresUserInput>true</RequiresUserInput>
+                </SynchronousCommand>
+                <SynchronousCommand wcm:action="add">
+                    <CommandLine>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File a:\ConfigureRemotingForAnsible.ps1</CommandLine>
+                    <Description>Configure WinRM for Ansible</Description>
+                    <Order>5</Order>
                     <RequiresUserInput>true</RequiresUserInput>
                 </SynchronousCommand>
                 <SynchronousCommand wcm:action="add">
