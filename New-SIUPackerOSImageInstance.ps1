@@ -7,9 +7,12 @@ function New-SIUPackerOSImageInstance {
         [ValidateSet("windows","centos","ubuntu")]
         [string] $OSName,
         ##
+        [Parameter(Mandatory)]
         [ValidateSet("desktop","server")]
-        [string] $BuildType
+        [string] $BuildType,
         ##
+        [Parameter(Mandatory)]
+        [string[]] $IsoPath
     )
 
     DynamicParam {
@@ -18,6 +21,7 @@ function New-SIUPackerOSImageInstance {
 
                 $param_winversion = "WindowsVersion"
                 $param_winsku = "WindowsSKU"
+                $param_winuanttend = "WindowsUnattendFile"
 
                 #WindowsVersion parameter
                 $WindowsVersion = New-Object -TypeName System.Management.Automation.ParameterAttribute
@@ -38,13 +42,24 @@ function New-SIUPackerOSImageInstance {
                 $WindowsSKU.Position = 2
                 $WindowsSKU.Mandatory = $true
     
-                $validate_set_attribute = New-Object -TypeName System.Management.Automation.ValidateSetAttribute -ArgumentList 'SERVERSTANDARD','SERVERSTANDARDCORE'
+                $validate_set_attribute = New-Object -TypeName System.Management.Automation.ValidateSetAttribute -ArgumentList 'SERVERSTANDARD','SERVERSTANDARDCORE','SERVERDATACENTER','SERVERDATACENTERCORE'
                 $attribute_collection = New-Object -TypeName System.Collections.ObjectModel.Collection[System.Attribute]
                 $attribute_collection.Add($WindowsSKU)
                 $attribute_collection.Add($validate_set_attribute)
         
                 $dynamic_parameter = New-Object -TypeName System.Management.Automation.RuntimeDefinedParameter($param_winsku, [string], $attribute_collection)
                 $parameter_dictionary.Add($param_winsku, $dynamic_parameter)
+
+                #WindowsUnattendFile parameter
+                $WindowsUnattend = New-Object -TypeName System.Management.Automation.ParameterAttribute
+                $WindowsUnattend.Position = 3
+                $WindowsUnattend.Mandatory = $false
+    
+                $attribute_collection = New-Object -TypeName System.Collections.ObjectModel.Collection[System.Attribute]
+                $attribute_collection.Add($WindowsUnattend)
+        
+                $dynamic_parameter = New-Object -TypeName System.Management.Automation.RuntimeDefinedParameter($param_winuanttend, [string], $attribute_collection)
+                $parameter_dictionary.Add($param_winuanttend, $dynamic_parameter)
                 return $parameter_dictionary
             }
             
@@ -81,18 +96,23 @@ function New-SIUPackerOSImageInstance {
                 return $parameter_dictionary
             }
         }
-<#         elseif ($OSName -eq 'ubuntu') {
-            $UbuntuVersion = New-Object -TypeName "System.Management.Automation.ParameterAttribute"
-            $UbuntuVersion.ParameterSetName = "Ubuntu"
+        elseif ($OSName -eq 'ubuntu') {
+            $param_ubuntuversion = "UbuntuVersion"
+
+            #UbuntuVersion parameter
+            $UbuntuVersion = New-Object -TypeName System.Management.Automation.ParameterAttribute
+            $UbuntuVersion.Position = 1
             $UbuntuVersion.Mandatory = $true
-    
-            $attribute_collection = New-Object -TypeName "System.Collections.ObjectModel.Collection[System.Attribute]"
+
+            $validate_set_attribute = New-Object -TypeName System.Management.Automation.ValidateSetAttribute -ArgumentList '18.04','20.04'
+            $attribute_collection = New-Object -TypeName System.Collections.ObjectModel.Collection[System.Attribute]
             $attribute_collection.Add($UbuntuVersion)
+            $attribute_collection.Add($validate_set_attribute)
     
-            $dynamic_parameter = New-Object -TypeName "System.Management.Automation.RuntimeDefinedParameter(`"UbuntuVersion`", [string], $attribute_collection)"
-            $parameter_dictionary = New-Object -TypeName "System.Management.Automation.RuntimeDefinedParameterDictionary"
-            $parameter_dictionary.Add("UbuntuVersion", $dynamic_parameter)
-            $parameter_dictionary
+            $dynamic_parameter = New-Object -TypeName System.Management.Automation.RuntimeDefinedParameter($param_ubuntuversion, [string], $attribute_collection)
+            $parameter_dictionary = New-Object -TypeName System.Management.Automation.RuntimeDefinedParameterDictionary
+            $parameter_dictionary.Add($param_ubuntuversion, $dynamic_parameter)
+            return $parameter_dictionary
         }
         elseif ($OSName -eq "centos") {
             $CentOSVersion = New-Object -TypeName "System.Management.Automation.ParameterAttribute"
@@ -107,13 +127,20 @@ function New-SIUPackerOSImageInstance {
             $parameter_dictionary = New-Object -TypeName "System.Management.Automation.RuntimeDefinedParameterDictionary"
             $parameter_dictionary.Add("CentOSVersion", $dynamic_parameter)
             $parameter_dictionary
-        } #>
+        }
     }
     
     BEGIN {
-        # This is essential for the dynamic parameters to be recognized.
-        $WindowsVersionObj = $PSBoundParameters[$param_winversion]
-        $WindowsSkuObj = $PSBoundParameters[$param_winsku]
+        if ($OSName -eq 'windows') {
+            # This is essential for the dynamic parameters to be recognized.
+            $WindowsVersionObj = $PSBoundParameters[$param_winversion]
+            $WindowsSkuObj = $PSBoundParameters[$param_winsku]   
+            $WindowsUnattendObj = $PSBoundParameters[$param_winuanttend]
+        }
+        elseif ($OSName -eq 'ubuntu') {
+            # This is essential for the dynamic parameters to be recognized.
+            $UbuntuVersionObj = $PSBoundParameters[$param_ubuntuversion]         
+        }
     }
 
     PROCESS {
@@ -124,6 +151,8 @@ function New-SIUPackerOSImageInstance {
                     os_sku = $WindowsSkuObj
                     os_buildtype = $BuildType
                     os_version = $WindowsVersionObj
+                    iso_url = $IsoPath
+                    unattend_file = $WindowsUnattendObj
                 }
             }
         
@@ -132,7 +161,12 @@ function New-SIUPackerOSImageInstance {
             }
         
             "ubuntu" { 
-        
+                return $os_instance = @{
+                    os_name = "$($_)"
+                    os_buildtype = $BuildType
+                    os_version = $UbuntuVersionObj
+                    iso_url = $IsoPath
+                }
             }
         }
     }
