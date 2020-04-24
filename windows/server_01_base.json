@@ -15,7 +15,9 @@
       "password": "itadm",
       "output_directory": "",
       "unattend_file": "",
-      "skip_export": ""
+      "skip_export": "",
+      "type": "",
+      "generation": ""
     },
 
     "builders": [
@@ -34,7 +36,7 @@
             "scripts/SetupComplete.cmd"
           ],
           "headless": false,
-          "generation": "1",
+          "generation": "{{user `generation`}}",
           "iso_urls": "{{user `iso_url`}}",
           "iso_checksum_type": "{{user `iso_checksum_type`}}",
           "iso_checksum": "{{user `iso_checksum`}}",
@@ -58,7 +60,7 @@
             "a<enter><wait>a<enter><wait>a<enter><wait>a<enter>"
           ],
           "headless": false,
-          "generation": "2",
+          "generation": "{{user `generation`}}",
           "iso_urls": "{{user `iso_url`}}",
           "iso_checksum_type": "{{user `iso_checksum_type`}}",
           "iso_checksum": "{{user `iso_checksum`}}",
