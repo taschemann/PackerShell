@@ -72,6 +72,73 @@
           "output_directory": "{{user `output_directory`}}",
           "skip_export": "{{user `skip_export`}}",
           "enable_secure_boot": true
+        },
+        {
+          "type": "vsphere-iso",
+
+          "vcenter_server": "",
+          "username": "",
+          "password": "",
+          "insecure_connection": "",
+          "datacenter": "",
+
+          "communicator": "",
+
+          "vm_name": "",
+          "folder": "",
+          "cluster": "",
+          "host": "",
+          "resource_pool": "",
+          "datastore": "",
+
+          "vm_version": "",
+          "guest_os_type": "",
+          "firmware": "",
+          "disk_controller_type": "",
+          "disk_size": "",
+          "disk_thin_provisioned": "",
+          "disk_eagerly_scrub": "",
+          "storage": "",
+          "network_card": "",
+          "network_adapters": "",
+          "network": "",
+          "mac_address": "",
+          "passthrough": "",
+          "usb_controller": "",
+          "notes": "",
+
+          "CPUs": "",
+          "cpu_cores": "",
+          "cpu_reservation": "",
+          "cpu_limit": "",
+          "cpu_hot_plug": "",
+
+          "RAM": "",
+          "RAM_reserve_all": "",
+          "RAM_reservation": "",
+          "RAM_hot_plug": "",
+          "video_ram": "",
+          "NestedHV": "",
+
+          "shutdown_command": "",
+          "shutdown_timeout": "",
+
+          "ip_wait_timeout": "",
+          "ip_settle_timeout": "",
+
+          "iso_checksum": "",
+          "iso_urls": "",
+          "iso_checksum_url": "",
+          "iso_checksum_type": "",
+          "iso_target_path": "",
+          "iso_target_extension": "",
+
+          "cdrom_type": "",
+          "iso_paths": "",
+
+          "floppy_img_path": "",
+          "floppy_files": "",
+          "floppy_dirs": ""
         }
       ]
 }
