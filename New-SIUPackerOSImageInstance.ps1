@@ -66,6 +66,7 @@ function New-SIUPackerOSImageInstance {
             elseif ($BuildType -eq 'desktop') {
                 $param_winversion = "WindowsVersion"
                 $param_winsku = "WindowsSKU"
+                $param_winuanttend = "WindowsUnattendFile"
 
                 #WindowsVersion parameter
                 $WindowsVersion = New-Object -TypeName System.Management.Automation.ParameterAttribute
@@ -93,6 +94,17 @@ function New-SIUPackerOSImageInstance {
         
                 $dynamic_parameter = New-Object -TypeName System.Management.Automation.RuntimeDefinedParameter($param_winsku, [string], $attribute_collection)
                 $parameter_dictionary.Add($param_winsku, $dynamic_parameter)
+
+                #WindowsUnattendFile parameter
+                $WindowsUnattend = New-Object -TypeName System.Management.Automation.ParameterAttribute
+                $WindowsUnattend.Position = 3
+                $WindowsUnattend.Mandatory = $false
+    
+                $attribute_collection = New-Object -TypeName System.Collections.ObjectModel.Collection[System.Attribute]
+                $attribute_collection.Add($WindowsUnattend)
+        
+                $dynamic_parameter = New-Object -TypeName System.Management.Automation.RuntimeDefinedParameter($param_winuanttend, [string], $attribute_collection)
+                $parameter_dictionary.Add($param_winuanttend, $dynamic_parameter)
                 return $parameter_dictionary
             }
         }
