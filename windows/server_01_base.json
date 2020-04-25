@@ -124,7 +124,7 @@
         {
           "type": "vsphere-iso",
 
-          "vcenter_server": "{{user `vcenter_server`}}",
+          "vcenter_server": "{{kuser `vcenter_server`}}",
           "username": "{{user `username`}}",
           "password": "{{user `password`}}",
           "insecure_connection": "{{user `insecure_connection`}}",
