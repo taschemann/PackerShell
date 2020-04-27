@@ -158,7 +158,7 @@ function New-SIUPackerOSImageInstance {
     PROCESS {
         switch ($OSName) {
             "windows" {
-                return $os_instance = @{
+                return $os_instance = [PSCustomObject]@{
                     os_name = "$($_)"
                     os_sku = $WindowsSkuObj
                     os_buildtype = $BuildType
@@ -173,7 +173,7 @@ function New-SIUPackerOSImageInstance {
             }
         
             "ubuntu" { 
-                return $os_instance = @{
+                return $os_instance = [PSCustomObject]@{
                     os_name = "$($_)"
                     os_buildtype = $BuildType
                     os_version = $UbuntuVersionObj
