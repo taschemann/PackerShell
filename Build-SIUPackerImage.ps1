@@ -11,28 +11,6 @@ class OperatingSystemValidValues : System.Management.Automation.IValidateSetValu
     }
 }
 
-class OperatingSystemVersionValidValues : System.Management.Automation.IValidateSetValuesGenerator {
-    [string[]] GetValidValues() {
-        $isos = Get-ChildItem -Path ".\iso\" | Where-Object { $_.Extension -eq ".iso" } | ForEach-Object { $_.BaseName -split '-' }
-        $valid_values = @()
-        for ($i = 1; $i -lt $isos.Length; $i+=4) {
-            $valid_values += $isos[$i]
-        }
-        return $($valid_values | Sort-Object | Get-Unique)
-    }
-}
-
-class OperatingSystemBuildTypeValidValues : System.Management.Automation.IValidateSetValuesGenerator {
-    [string[]] GetValidValues() {
-        $isos = Get-ChildItem -Path ".\iso\" | Where-Object { $_.Extension -eq ".iso" } | ForEach-Object { $_.BaseName -split '-' }
-        $valid_values = @()
-        for ($i = 2; $i -lt $isos.Length; $i+=4) {
-            $valid_values += $isos[$i]
-        }
-        return $($valid_values | Sort-Object | Get-Unique)
-    }
-}
-
 class OperatingSystemArchitectureValidValues : System.Management.Automation.IValidateSetValuesGenerator {
     [string[]] GetValidValues() {
         $isos = Get-ChildItem -Path ".\iso\" | Where-Object { $_.Extension -eq ".iso" } | ForEach-Object { $_.BaseName -split '-' }
@@ -48,130 +26,79 @@ function Build-SIUPackerImage {
     [CmdletBinding()]
     param (
         ##
-        [Parameter(Mandatory, Position = 0, ValueFromPipelineByPropertyName)]
-        [ValidateSet("HyperV","Vsphere","Virtualbox")]
-        [string] $HypervisorPlatform,
+        #[Parameter(Mandatory, Position = 0, ValueFromPipelineByPropertyName)]
+        #[ValidateSet("HyperV","Vsphere","Virtualbox")]
+        #[string] $Hypervisor,
         ##
         [Parameter(Mandatory, Position=1)]
         [ValidateSet([OperatingSystemValidValues])]
         [string[]] $OSName,
         ##
-        [Parameter(Mandatory, Position=2)]
-        [ValidateSet([OperatingSystemVersionValidValues])]
-        [string[]] $OSVersion,
-        ##
-        [Parameter(Mandatory, Position=3)]
-        [ValidateSet([OperatingSystemBuildTypeValidValues])]
-        [string[]] $OSType,
-        ##
         [Parameter()]
-        [ValidateSet([OperatingSystemArchitectureValidValues])]
-        [string[]] $OSArch,
-        ##
-        [Parameter()]
-        [string] $OutputPath = "$pwd\builds",
+        [ValidateSet('desktop','server')]
+        [string[]] $OSBuildType,
         ##
         [Parameter()]
         [ValidateSet("BuildBaseImage","BuildUpdatedBaseImage","CleanupBaseImage")]
         [string] $BuildStep,
         ##
         [Parameter()]
-        [hashtable[]] $InputObject
+        [string] $OutputPath = "$pwd\builds",
+        ##
+        [Parameter()]
+        [ValidateSet([OperatingSystemArchitectureValidValues])]
+        [string[]] $OSArch
     )
 
     DynamicParam {
         if ($OSName -eq 'windows') {
-            if ($BuildType -eq 'server') {
 
-                $param_winversion = "WindowsVersion"
-                $param_winsku = "WindowsSKU"
-                $param_winuanttend = "WindowsUnattendFile"
+            $param_winversion = "WindowsVersion"
+            $param_winsku = "WindowsSKU"
+            #$param_winuanttend = "WindowsUnattendFile"
+            #WindowsVersion parameter
 
-                #WindowsVersion parameter
-                $WindowsVersion = New-Object -TypeName System.Management.Automation.ParameterAttribute
-                $WindowsVersion.Position = 1
-                $WindowsVersion.Mandatory = $true
-    
-                $validate_set_attribute = New-Object -TypeName System.Management.Automation.ValidateSetAttribute -ArgumentList '2016','2019'
-                $attribute_collection = New-Object -TypeName System.Collections.ObjectModel.Collection[System.Attribute]
-                $attribute_collection.Add($WindowsVersion)
-                $attribute_collection.Add($validate_set_attribute)
-        
-                $dynamic_parameter = New-Object -TypeName System.Management.Automation.RuntimeDefinedParameter($param_winversion, [string], $attribute_collection)
-                $parameter_dictionary = New-Object -TypeName System.Management.Automation.RuntimeDefinedParameterDictionary
-                $parameter_dictionary.Add($param_winversion, $dynamic_parameter)
-
-                #WindowsSKU parameter
-                $WindowsSKU = New-Object -TypeName System.Management.Automation.ParameterAttribute
-                $WindowsSKU.Position = 2
-                $WindowsSKU.Mandatory = $true
-    
-                $validate_set_attribute = New-Object -TypeName System.Management.Automation.ValidateSetAttribute -ArgumentList 'SERVERSTANDARD','SERVERSTANDARDCORE','SERVERDATACENTER','SERVERDATACENTERCORE'
-                $attribute_collection = New-Object -TypeName System.Collections.ObjectModel.Collection[System.Attribute]
-                $attribute_collection.Add($WindowsSKU)
-                $attribute_collection.Add($validate_set_attribute)
-        
-                $dynamic_parameter = New-Object -TypeName System.Management.Automation.RuntimeDefinedParameter($param_winsku, [string], $attribute_collection)
-                $parameter_dictionary.Add($param_winsku, $dynamic_parameter)
-
-                #WindowsUnattendFile parameter
-                $WindowsUnattend = New-Object -TypeName System.Management.Automation.ParameterAttribute
-                $WindowsUnattend.Position = 3
-                $WindowsUnattend.Mandatory = $false
-    
-                $attribute_collection = New-Object -TypeName System.Collections.ObjectModel.Collection[System.Attribute]
-                $attribute_collection.Add($WindowsUnattend)
-        
-                $dynamic_parameter = New-Object -TypeName System.Management.Automation.RuntimeDefinedParameter($param_winuanttend, [string], $attribute_collection)
-                $parameter_dictionary.Add($param_winuanttend, $dynamic_parameter)
-                return $parameter_dictionary
+            $iso_file_names = Get-ChildItem -Path ".\iso\" | Where-Object { $_.Name -like "windows*.iso" }
+            $iso_table = [ordered] @{}
+            $iso_table_array = @()
+            foreach ($file in $iso_file_names) {
+                $iso_properties = $file.BaseName -split '-'
+                $iso_table = (ConvertFrom-StringData -StringData "OSName = $($iso_properties[0]) `n OSVersion = $($iso_properties[1]) `n OSType = $($iso_properties[2]) `n OSArch = $($iso_properties[3])")
+                $iso_table_array += ($iso_table)
             }
+
+            $WindowsVersion = New-Object -TypeName System.Management.Automation.ParameterAttribute
+            $WindowsVersion.Mandatory = $true
+
+            $validate_set_attribute = New-Object -TypeName System.Management.Automation.ValidateSetAttribute -ArgumentList $($iso_table_array | Where-Object { $_.OSType -eq $OSBuildType} | Select-Object -ExpandProperty OSVersion)
+            $attribute_collection = New-Object -TypeName System.Collections.ObjectModel.Collection[System.Attribute]
+            $attribute_collection.Add($WindowsVersion)
+            $attribute_collection.Add($validate_set_attribute)
+    
+            $dynamic_parameter = New-Object -TypeName System.Management.Automation.RuntimeDefinedParameter($param_winversion, [string], $attribute_collection)
+            $parameter_dictionary = New-Object -TypeName System.Management.Automation.RuntimeDefinedParameterDictionary
+            $parameter_dictionary.Add($param_winversion, $dynamic_parameter)
             
-            elseif ($BuildType -eq 'desktop') {
-                $param_winversion = "WindowsVersion"
-                $param_winsku = "WindowsSKU"
-                $param_winuanttend = "WindowsUnattendFile"
+            #WindowsSKU parameter
+            $WindowsSKU = New-Object -TypeName System.Management.Automation.ParameterAttribute
+            $WindowsSKU.Mandatory = $true
 
-                #WindowsVersion parameter
-                $WindowsVersion = New-Object -TypeName System.Management.Automation.ParameterAttribute
-                $WindowsVersion.Position = 1
-                $WindowsVersion.Mandatory = $true
-    
-                $validate_set_attribute = New-Object -TypeName System.Management.Automation.ValidateSetAttribute -ArgumentList '1909','2004','LTSB2016','LTSB2019'
-                $attribute_collection = New-Object -TypeName System.Collections.ObjectModel.Collection[System.Attribute]
-                $attribute_collection.Add($WindowsVersion)
-                $attribute_collection.Add($validate_set_attribute)
-        
-                $dynamic_parameter = New-Object -TypeName System.Management.Automation.RuntimeDefinedParameter($param_winversion, [string], $attribute_collection)
-                $parameter_dictionary = New-Object -TypeName System.Management.Automation.RuntimeDefinedParameterDictionary
-                $parameter_dictionary.Add($param_winversion, $dynamic_parameter)
-                
-                #WindowsSKU parameter
-                $WindowsSKU = New-Object -TypeName System.Management.Automation.ParameterAttribute
-                $WindowsSKU.Position = 2
-                $WindowsSKU.Mandatory = $true
-    
-                $validate_set_attribute = New-Object -TypeName System.Management.Automation.ValidateSetAttribute -ArgumentList 'ENTERPRISE','PROFESSIONAL'
-                $attribute_collection = New-Object -TypeName System.Collections.ObjectModel.Collection[System.Attribute]
-                $attribute_collection.Add($WindowsSKU)
-                $attribute_collection.Add($validate_set_attribute)
-        
-                $dynamic_parameter = New-Object -TypeName System.Management.Automation.RuntimeDefinedParameter($param_winsku, [string], $attribute_collection)
-                $parameter_dictionary.Add($param_winsku, $dynamic_parameter)
-
-                #WindowsUnattendFile parameter
-                $WindowsUnattend = New-Object -TypeName System.Management.Automation.ParameterAttribute
-                $WindowsUnattend.Position = 3
-                $WindowsUnattend.Mandatory = $false
-    
-                $attribute_collection = New-Object -TypeName System.Collections.ObjectModel.Collection[System.Attribute]
-                $attribute_collection.Add($WindowsUnattend)
-        
-                $dynamic_parameter = New-Object -TypeName System.Management.Automation.RuntimeDefinedParameter($param_winuanttend, [string], $attribute_collection)
-                $parameter_dictionary.Add($param_winuanttend, $dynamic_parameter)
-                return $parameter_dictionary
+            if ($OSBuildType -eq 'server') {
+                $validate_set_attribute = New-Object -TypeName System.Management.Automation.ValidateSetAttribute -ArgumentList 'SERVERSTANDARD','SERVERSTANDARDCORE','SERVERDATACENTER','SERVERDATACENTERCORE'
             }
+            elseif ($OSBuildType -eq 'desktop') {
+                $validate_set_attribute = New-Object -TypeName System.Management.Automation.ValidateSetAttribute -ArgumentList 'ENTERPRISE','PROFESSIONAL'
+            }
+            $attribute_collection = New-Object -TypeName System.Collections.ObjectModel.Collection[System.Attribute]
+            $attribute_collection.Add($WindowsSKU)
+            $attribute_collection.Add($validate_set_attribute)
+        
+            $dynamic_parameter = New-Object -TypeName System.Management.Automation.RuntimeDefinedParameter($param_winsku, [string], $attribute_collection)
+            $parameter_dictionary.Add($param_winsku, $dynamic_parameter)
+
+            return $parameter_dictionary
         }
+
         elseif ($OSName -eq 'ubuntu') {
             $param_ubuntuversion = "UbuntuVersion"
 
@@ -207,12 +134,30 @@ function Build-SIUPackerImage {
     }
 
     BEGIN {
-        if (Test-Path -Path $OutputPath) {
-            Remove-Item -Path $OutputPath -Force -Recurse
+        #Regenerate the iso table
+        $iso_file_names = Get-ChildItem -Path ".\iso\" | Where-Object { $_.Name -like "windows*.iso" }
+        $iso_table = [ordered] @{}
+        $iso_table_array = @()
+        foreach ($file in $iso_file_names) {
+            $iso_properties = $file.BaseName -split '-'
+            $iso_table = (ConvertFrom-StringData -StringData "OSName = $($iso_properties[0]) `n OSVersion = $($iso_properties[1]) `n OSType = $($iso_properties[2]) `n OSArch = $($iso_properties[3])")
+            $iso_table_array += ($iso_table)
         }
-    
-        if (($BuildType -eq "desktop") -and ($WindowsSKU -ne ("ENTERPRISE" -or "PROFESSIONAL"))) {
-            throw "Desktop builds must use the ENTERPRISE or PROFESSIONAL SKU."
+        if ($OSName -eq 'windows') {
+            # This is essential for the dynamic parameters to be recognized.
+            $WindowsVersionObj = $PSBoundParameters[$param_winversion]
+            $WindowsSkuObj = $PSBoundParameters[$param_winsku]
+            $CurrentWindowsObject = $iso_table_array | Where-Object { $_.OSVersion -eq $WindowsVersionObj }
+            if (($CurrentWindowsObject.OSType -ne $OSBuildType) -and ($WindowsSkuObj -ne ("ENTERPRISE" -or "PROFESSIONAL"))) {
+                throw "Desktop builds must use the ENTERPRISE or PROFESSIONAL SKU."
+            }
+            elseif (($CurrentWindowsObject.OSType -eq "server") -and ($WindowsSkuObj -ne ("SERVERSTANDARD" -or "SERVERSTANDARDCORE" -or "SERVERDATACENTER" -or "SERVERDATACENTERCORE"))) {
+                throw "Server builds must use the SERVERSTANDARD, SERVERSTANDARDCORE, SERVERDATACENTER, or SERVERDATACENTERCORE SKU."
+            }
+        }
+        elseif ($iso_table_array.OSName -eq 'ubuntu') {
+            # This is essential for the dynamic parameters to be recognized.
+            $UbuntuVersionObj = $PSBoundParameters[$param_ubuntuversion]         
         }
     }
     
@@ -298,3 +243,5 @@ function Build-SIUPackerImage {
     END {}
     
 }
+
+Import-Module .\Build-SIUPackerImage.ps1 -Force
