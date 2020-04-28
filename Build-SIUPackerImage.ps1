@@ -43,7 +43,7 @@ function Build-SIUPackerImage {
         [string] $BuildStep,
         ##
         [Parameter()]
-        [string] $OutputPath = "$pwd\builds",
+        [string] $OutputPath = "$PSScriptRoot\builds",
         ##
         [Parameter()]
         [ValidateSet([OperatingSystemArchitectureValidValues])]
@@ -134,6 +134,8 @@ function Build-SIUPackerImage {
     }
 
     BEGIN {
+        $iso_directory = "$PSScriptRoot\iso"
+        Invoke-Command -FilePath "$iso_directory\Build-HashSumFile.ps1"
         #Regenerate the iso table
         $iso_file_names = Get-ChildItem -Path ".\iso\" | Where-Object { $_.Name -like "windows*.iso" }
         $iso_table = [ordered] @{}
@@ -148,12 +150,7 @@ function Build-SIUPackerImage {
             $WindowsVersionObj = $PSBoundParameters[$param_winversion]
             $WindowsSkuObj = $PSBoundParameters[$param_winsku]
             $CurrentWindowsObject = $iso_table_array | Where-Object { $_.OSVersion -eq $WindowsVersionObj }
-            if (($CurrentWindowsObject.OSType -ne $OSBuildType) -and ($WindowsSkuObj -ne ("ENTERPRISE" -or "PROFESSIONAL"))) {
-                throw "Desktop builds must use the ENTERPRISE or PROFESSIONAL SKU."
-            }
-            elseif (($CurrentWindowsObject.OSType -eq "server") -and ($WindowsSkuObj -ne ("SERVERSTANDARD" -or "SERVERSTANDARDCORE" -or "SERVERDATACENTER" -or "SERVERDATACENTERCORE"))) {
-                throw "Server builds must use the SERVERSTANDARD, SERVERSTANDARDCORE, SERVERDATACENTER, or SERVERDATACENTERCORE SKU."
-            }
+            $CurrentWindowsObject
         }
         elseif ($iso_table_array.OSName -eq 'ubuntu') {
             # This is essential for the dynamic parameters to be recognized.
@@ -166,26 +163,25 @@ function Build-SIUPackerImage {
             switch ($os) {
         
                 'windows' {
-                    switch ($WindowsSKU) {
-                        'standard' { $unattend_path = ".\windows\unattend\$Firmware\serverstandard\autounattend.xml" }
-                        'datacenter' { $unattend_path = ".\windows\unattend\$Firmware\serverdatacenter\autounattend.xml" }
-                        'standardcore' { $unattend_path = ".\windows\unattend\$Firmware\serverstandardcore\autounattend.xml" }
-                        'datacentercore' { $unattend_path = ".\windows\unattend\$Firmware\serverdatacentercore\autounattend.xml" }
-                        'enterprise' { $unattend_path = ".\windows\unattend\$Firmware\enterprise\autounattend.xml" }
-                        'professional' { $unattend_path = ".\windows\unattend\$Firmware\professional\autounattend.xml" }
+                    switch ($WindowsSKUObj) {
+                        'SERVERSTANDARD' { $unattend_path = "$PSScriptRoot\windows\unattend\$Firmware\serverstandard\autounattend.xml" }
+                        'SERVERDATACENTER' { $unattend_path = "$PSScriptRoot\windows\unattend\$Firmware\serverdatacenter\autounattend.xml" }
+                        'SERVERSTANDARDCORE' { $unattend_path = "$PSScriptRoot\windows\unattend\$Firmware\serverstandardcore\autounattend.xml" }
+                        'SERVERDATACENTERCORE' { $unattend_path = "$PSScriptRoot\windows\unattend\$Firmware\serverdatacentercore\autounattend.xml" }
+                        'ENTERPRISE' { $unattend_path = "$PSScriptRoot\windows\unattend\$Firmware\enterprise\autounattend.xml" }
+                        'PROFESSIONAL' { $unattend_path = "$PSScriptRoot\windows\unattend\$Firmware\professional\autounattend.xml" }
                     }
-            
-                    $packer_data = @{
+                    
+                    $packer_data = [ordered] @{
                         os_name = "$($_)"
-                        vm_name = "$VMName"
-                        build_type = "$BuildType"
-                        iso_url = "$IsoUrl"
+                        vm_name = "packer`-$OSName`-$($CurrentWindowsObject.OSVersion)`-$($CurrentWindowsObject.OSType)`-$($CurrentWindowsObject.OSArch)"
+                        build_type = "$OSBuildType"
+                        iso_url = "$($iso_directory)"
                         unattend_file = "$unattend_path"
-                        cpu = $ProcessorCount
-                        ram_size = $MemoryInMegabytes
-                        disk_size = $DiskSizeInMegabytes
                         output_directory = "$OutputPath"
                     }
+
+                    $packer_data
                 }
             
                 'centos' {
