@@ -39,6 +39,10 @@ function Build-SIUPackerImage {
         [string[]] $OSBuildType,
         ##
         [Parameter()]
+        [ValidateSet("bios","uefi")]
+        [string] $Firmware = "uefi",
+        ##
+        [Parameter()]
         [ValidateSet("BuildBaseImage","BuildUpdatedBaseImage","CleanupBaseImage")]
         [string] $BuildStep = "BuildBaseImage",
         ##
@@ -47,7 +51,7 @@ function Build-SIUPackerImage {
         ##
         [Parameter()]
         [ValidateSet([OperatingSystemArchitectureValidValues])]
-        [string[]] $OSArch
+        [string[]] $OSArch = "x64"
     )
 
     DynamicParam {
@@ -177,10 +181,12 @@ function Build-SIUPackerImage {
         elseif ($OSName -eq 'ubuntu') {
             # This is essential for the dynamic parameters to be recognized.
             $UbuntuVersionObj = $PSBoundParameters[$param_ubuntuversion]
+            $CurrentUbuntuObject = $iso_table_array | Where-Object { $_.OSVersion -eq $UbuntuVersionObj }
         }
         elseif ($OSName -eq 'centos') {
             # This is essential for the dynamic parameters to be recognized.
             $CentOSVersionObj = $PSBoundParameters[$param_centosversion]
+            $CurrentCentOSObject = $iso_table_array | Where-Object { $_.OSVersion -eq $CentOSVersionObj }
 
             if ($OSBuildType -eq 'desktop') {
                 throw "Desktop deployment not available for CentOS right now. Please use `"server`" for your OSBuildType value."
@@ -218,9 +224,9 @@ function Build-SIUPackerImage {
             
                     $packer_data = @{
                         os_name = "$($_)"
-                        vm_name = "$VMName"
-                        build_type = "$BuildType"
-                        iso_url = "$IsoUrl"
+                        vm_name = "packer`-$OSName`-$($CurrentCentOSObject.OSVersion)`-$($CurrentCentOSObject.OSType)`-$($CurrentCentOSObject.OSArch)"
+                        build_type = "$OSBuildType"
+                        iso_url = "$($iso_directory)"
                         kickstart_file = "$unattend_path"
                         output_directory = "$OutputPath"
                     }
@@ -230,13 +236,10 @@ function Build-SIUPackerImage {
             
                     $packer_data = @{
                         os_name = "$($_)"
-                        vm_name = "$VMName"
-                        build_type = "$BuildType"
-                        iso_url = "$IsoUrl"
+                        vm_name = "packer`-$OSName`-$($CurrentUbuntuObject.OSVersion)`-$($CurrentUbuntuObject.OSType)`-$($CurrentUbuntuObject.OSArch)"
+                        build_type = "$OSBuildType"
+                        iso_url = "$($iso_directory)"
                         preseed_file = "$unattend_path"
-                        cpu = $ProcessorCount
-                        ram_size = $MemoryInMegabytes
-                        disk_size = $DiskSizeInMegabytes
                         output_directory = "$OutputPath"
                     }
                 }
