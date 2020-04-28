@@ -135,7 +135,7 @@ function Build-SIUPackerImage {
 
     BEGIN {
         $iso_directory = "$PSScriptRoot\iso"
-        Invoke-Command -FilePath "$iso_directory\Build-HashSumFile.ps1"
+        Invoke-Expression -Command "$iso_directory\Build-HashSumFile.ps1"
         #Regenerate the iso table
         $iso_file_names = Get-ChildItem -Path ".\iso\" | Where-Object { $_.Name -like "windows*.iso" }
         $iso_table = [ordered] @{}
@@ -239,5 +239,3 @@ function Build-SIUPackerImage {
     END {}
     
 }
-
-Import-Module .\Build-SIUPackerImage.ps1 -Force
