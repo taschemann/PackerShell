@@ -161,6 +161,8 @@ function Build-SIUPackerImage {
     }
 
     BEGIN {
+        $env:PACKER_LOG=1
+        $env:PACKER_LOG_PATH="$PSScriptRoot\logs\packer_$OSName_$(Get-Date -UFormat "%d%b%Y_%H%M").log"
         $iso_directory = "$PSScriptRoot\iso"
         Invoke-Expression -Command "$iso_directory\Build-HashSumFile.ps1"
         #Regenerate the iso table
@@ -260,10 +262,12 @@ function Build-SIUPackerImage {
                         $var_array += @($packer_data.GetEnumerator() | ForEach-Object {"-var `'$($_.Key)=$($_.Value)`'"})
                         if ($Firmware -eq "bios") {
                             Start-Process -FilePath "$(Get-ChildItem -Path $PSScriptRoot\shared\utils | Where-Object { $_.Extension -eq ".exe" } )" `
-                                -ArgumentList "build -var `'type=hyperv-iso`' $($var_array.GetEnumerator()) -var-file=`"$PSSriptRoot\shared\utils\dev.hyperv_windows.optimized_variables.pkrvars.hcl`" $PSScriptRoot\windows\server_01_base.json"`
-                                -Wait -NoNewWindow
+                                -ArgumentList "build $($var_array.GetEnumerator()) -var-file=`"$PSSriptRoot\shared\utils\dev.hyperv_windows.optimized_variables.pkrvars.hcl`"`
+                                 $PSScriptRoot\windows\server_01_base.json" -Wait -NoNewWindow
                         } elseif ($Firmware -eq "uefi") {
-                            Start-Process -FilePath "$(Get-ChildItem -Path $PSScriptRoot\shared\utils | Where-Object { $_.Extension -eq ".exe" } )" -ArgumentList "build -var `'type=hyperv-iso`' $($var_array.GetEnumerator()) $PSScriptRoot\windows\server_01_base.json" -Wait -NoNewWindow # "build -var-file=`"$PSScriptRoot\shared\packer_var\hyperv-variables.pkrvars.hcl`" `"os_name=$($packer_data.os_name)`" -var `"vm_name=$($packer_data.vm_name)`" -var `"iso_url=$($packer_data.iso_url)`" -var `"unattend_file=$($packer_data.unattend_file)`" -var `"cpu=$($packer_data.cpu)`" -var `"ram_size=$($packer_data.ram_size)`" -var `"disk_size=$($packer_data.disk_size)`" -var `"output_directory=$($packer_data.output_directory)`" .\windows\server_01_base.json" -Wait -NoNewWindow   
+                            Start-Process -FilePath "$(Get-ChildItem -Path $PSScriptRoot\shared\utils | Where-Object { $_.Extension -eq ".exe" } )" `
+                                -ArgumentList "build $($var_array.GetEnumerator()) -var-file=`"$PSSriptRoot\shared\utils\dev.hyperv_windows.optimized_variables.pkrvars.hcl`"`
+                                $PSScriptRoot\windows\server_01_base.json" -Wait -NoNewWindow
                         }
                     }
                     # Build Image with Updates
