@@ -123,7 +123,7 @@
         },
         {
           "name": "hyper-iso",
-          "type": "hyper-iso",
+          "type": "hyperv-iso",
           "iso_urls": "{{user `iso_url`}}",
           "iso_checksum_type": "{{user `iso_checksum_type`}}",
           "iso_checksum": "{{user `iso_checksum`}}",
