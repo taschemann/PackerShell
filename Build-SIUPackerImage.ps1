@@ -262,12 +262,12 @@ function Build-SIUPackerImage {
                         $var_array += @($packer_data.GetEnumerator() | ForEach-Object {"-var `'$($_.Key)=$($_.Value)`'"})
                         if ($Firmware -eq "bios") {
                             Start-Process -FilePath "$(Get-ChildItem -Path $PSScriptRoot\shared\utils | Where-Object { $_.Extension -eq ".exe" } )" `
-                                -ArgumentList "build $($var_array.GetEnumerator()) -var-file=`"$PSSriptRoot\shared\utils\dev.hyperv_windows.optimized_variables.pkrvars.hcl`"`
-                                 $PSScriptRoot\windows\server_01_base.json" -Wait -NoNewWindow
+                                -ArgumentList "build $($var_array.GetEnumerator()) -var-file=`"$PSScriptRoot\shared\utils\dev.hyperv.gen1_$($OSName).optimized_variables.pkrvars.hcl`"`
+                                 $PSScriptRoot\server_01_base.json" -Wait -NoNewWindow
                         } elseif ($Firmware -eq "uefi") {
                             Start-Process -FilePath "$(Get-ChildItem -Path $PSScriptRoot\shared\utils | Where-Object { $_.Extension -eq ".exe" } )" `
-                                -ArgumentList "build $($var_array.GetEnumerator()) -var-file=`"$PSSriptRoot\shared\utils\dev.hyperv_windows.optimized_variables.pkrvars.hcl`"`
-                                $PSScriptRoot\windows\server_01_base.json" -Wait -NoNewWindow
+                                -ArgumentList "build $($var_array.GetEnumerator()) -var-file=`"$PSScriptRoot\shared\utils\dev.hyperv.gen2_$($OSName).optimized_variables.pkrvars.hcl`"`
+                                $PSScriptRoot\server_01_base.json" -Wait -NoNewWindow
                         }
                     }
                     # Build Image with Updates
