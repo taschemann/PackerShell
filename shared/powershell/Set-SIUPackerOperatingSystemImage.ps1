@@ -9,10 +9,7 @@ function New-SIUPackerOSImageInstance {
         ##
         [Parameter(Mandatory)]
         [ValidateSet("desktop","server")]
-        [string] $BuildType,
-        ##
-        [Parameter(Mandatory)]
-        [string[]] $IsoPath
+        [string] $BuildType
     )
 
     DynamicParam {
@@ -152,6 +149,15 @@ function New-SIUPackerOSImageInstance {
         elseif ($OSName -eq 'ubuntu') {
             # This is essential for the dynamic parameters to be recognized.
             $UbuntuVersionObj = $PSBoundParameters[$param_ubuntuversion]         
+        }
+
+        foreach ($iso in $IsoPath) {
+            if (Test-Path -Path "$iso") {
+                
+            }
+            else {
+                throw "$IsoPath not found."
+            }
         }
     }
 
