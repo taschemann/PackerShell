@@ -53,7 +53,7 @@ function Build-SIUPackerImage {
         [ValidateSet([OperatingSystemArchitectureValidValues])]
         [string[]] $OSArch = "x64"
     )
-
+    #region Dynamic Parameters
     DynamicParam {
         if ($OSName -eq 'windows') {
 
@@ -159,10 +159,16 @@ function Build-SIUPackerImage {
             return $parameter_dictionary
         }
     }
-
+    #endregion Dynamic Parameters
     BEGIN {
+        #region Packer Logging
         $env:PACKER_LOG=1
-        $env:PACKER_LOG_PATH="$PSScriptRoot\logs\packer_$OSName_$(Get-Date -UFormat "%d%b%Y_%H%M").log"
+        $env:PACKER_LOG_PATH="$PSScriptRoot\logs\packer_$OSName_$(Get-Date -UFormat "%d%b%Y_%H%M%S").log"
+        if (-not (Test-Path "$PSScriptRoot\logs")) {
+            New-Item -Path "$PSScriptRoot\logs" -ItemType Directory -Force
+        }
+        #endregion Packer Logging
+
         $iso_directory = "$PSScriptRoot\iso"
         Invoke-Expression -Command "$iso_directory\Build-HashSumFile.ps1"
         #Regenerate the iso table
@@ -260,14 +266,16 @@ function Build-SIUPackerImage {
                     # Build Base Image
                     if (((-not $BuildStep) -or ($BuildStep -eq "BuildBaseImage")) -and ($Hypervisor -eq "HyperV") ) {
                         $var_array += @($packer_data.GetEnumerator() | ForEach-Object {"-var `'$($_.Key)=$($_.Value)`'"})
-                        if ($Firmware -eq "bios") {
-                            Start-Process -FilePath "$(Get-ChildItem -Path $PSScriptRoot\shared\utils | Where-Object { $_.Extension -eq ".exe" } )" `
-                                -ArgumentList "build $($var_array.GetEnumerator()) -var-file=`"$PSScriptRoot\shared\utils\dev.hyperv.gen1_$($OSName).optimized_variables.pkrvars.hcl`"`
-                                 $PSScriptRoot\server_01_base.json" -Wait -NoNewWindow
-                        } elseif ($Firmware -eq "uefi") {
-                            Start-Process -FilePath "$(Get-ChildItem -Path $PSScriptRoot\shared\utils | Where-Object { $_.Extension -eq ".exe" } )" `
-                                -ArgumentList "build $($var_array.GetEnumerator()) -var-file=`"$PSScriptRoot\shared\utils\dev.hyperv.gen2_$($OSName).optimized_variables.pkrvars.hcl`"`
-                                $PSScriptRoot\server_01_base.json" -Wait -NoNewWindow
+                        Write-Verbose -Message "$var_array"
+                        if (($Firmware -eq "uefi") -or ($null -eq $Firmware)) {
+                            Start-Process -FilePath "$(Get-ChildItem -Path $PSScriptRoot\shared\utils\packer\ | Where-Object { $_.Extension -eq ".exe" } )" `
+                            -ArgumentList "build $($var_array.GetEnumerator()) -var-file=`"$PSScriptRoot\shared\utils\packer\dev.hyperv.gen2_$($OSName).optimized_variables.pkrvars.hcl`"`
+                            $PSScriptRoot\$OSName\server_01_base.json" -Wait -NoNewWindow
+
+                        } elseif ($Firmware -eq "bios") {
+                            Start-Process -FilePath "$(Get-ChildItem -Path $PSScriptRoot\shared\utils\packer | Where-Object { $_.Extension -eq ".exe" } )" `
+                            -ArgumentList "build $($var_array.GetEnumerator()) -var-file=`"$PSScriptRoot\shared\utils\packer\dev.hyperv.gen1_$($OSName).optimized_variables.pkrvars.hcl`"`
+                             $PSScriptRoot\$OSName\server_01_base.json" -Wait -NoNewWindow
                         }
                     }
                     # Build Image with Updates
