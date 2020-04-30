@@ -1,0 +1,1 @@
+b570ddfdc4672f4629a95316563df923bd834aec657de5d4ca7c7ef9b58df2b1  windows-ltsc2019-desktop-x64.iso
