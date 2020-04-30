@@ -12,6 +12,6 @@ foreach ($iso in $images) {
     if (-not(Test-Path -Path "$checksum_path\$($iso.BaseName)_checksum.txt")) {
         New-Item -Path "$checksum_path" -Name "$($iso.BaseName)_checksum.txt"
         $hash = Get-FileHash -Path "$($iso.FullName)" -Algorithm SHA256
-        "$($hash.Hash.ToLower())  $($iso.Name)" > "$checksum_path\$($iso.BaseName)_checksum.txt"
+        "$(($hash | Select-Object -ExpandProperty Hash).ToLower())  $($iso.Name)" > "$checksum_path\$($iso.BaseName)_checksum.txt"
     }
 }
