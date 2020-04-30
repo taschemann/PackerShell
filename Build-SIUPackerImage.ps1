@@ -2,7 +2,7 @@
 
 class OperatingSystemValidValues : System.Management.Automation.IValidateSetValuesGenerator {
     [string[]] GetValidValues() {
-        $isos = Get-ChildItem -Path "$PSScriptRoot\iso" | Where-Object { $_.Extension -eq ".iso" } | ForEach-Object { $_.BaseName -split '-' }
+        $isos = Get-ChildItem -Path "$PSScriptRoot\shared\http\iso" | Where-Object { $_.Extension -eq ".iso" } | ForEach-Object { $_.BaseName -split '-' }
         $valid_values = @()
         for ($i = 0; $i -lt $isos.Length; $i+=4) {
             $valid_values += $isos[$i]
@@ -13,7 +13,7 @@ class OperatingSystemValidValues : System.Management.Automation.IValidateSetValu
 
 class OperatingSystemArchitectureValidValues : System.Management.Automation.IValidateSetValuesGenerator {
     [string[]] GetValidValues() {
-        $isos = Get-ChildItem -Path "$PSScriptRoot\iso" | Where-Object { $_.Extension -eq ".iso" } | ForEach-Object { $_.BaseName -split '-' }
+        $isos = Get-ChildItem -Path "$PSScriptRoot\shared\http\iso" | Where-Object { $_.Extension -eq ".iso" } | ForEach-Object { $_.BaseName -split '-' }
         $valid_values = @()
         for ($i = 3; $i -lt $isos.Length; $i+=4) {
             $valid_values += $isos[$i]
@@ -47,6 +47,13 @@ function Build-SIUPackerImage {
         [string] $BuildStep = "BuildBaseImage",
         ##
         [Parameter()]
+        [string[]] $PackerVariableFile,
+        ##
+        [Parameter()]
+        [AllowNull()]
+        [string] $PackerTemplateFile,
+        ##
+        [Parameter()]
         [string] $OutputPath = "$PSScriptRoot\builds",
         ##
         [Parameter()]
@@ -62,7 +69,7 @@ function Build-SIUPackerImage {
             #$param_winuanttend = "WindowsUnattendFile"
             #WindowsVersion parameter
 
-            $iso_file_names = Get-ChildItem -Path "$PSScriptRoot\iso" | Where-Object { $_.Name -like "$OSName*.iso" }
+            $iso_file_names = Get-ChildItem -Path "$PSScriptRoot\shared\http\iso" | Where-Object { $_.Name -like "$OSName*.iso" }
             $iso_table = [ordered] @{}
             $iso_table_array = @()
             foreach ($file in $iso_file_names) {
@@ -106,7 +113,7 @@ function Build-SIUPackerImage {
         elseif ($OSName -eq 'ubuntu') {
             $param_ubuntuversion = "UbuntuVersion"
 
-            $iso_file_names = Get-ChildItem -Path "$PSScriptRoot\iso" | Where-Object { $_.Name -like "$OSName*.iso" }
+            $iso_file_names = Get-ChildItem -Path "$PSScriptRoot\shared\http\iso" | Where-Object { $_.Name -like "$OSName*.iso" }
             $iso_table = [ordered] @{}
             $iso_table_array = @()
             foreach ($file in $iso_file_names) {
@@ -134,7 +141,7 @@ function Build-SIUPackerImage {
         elseif ($OSName -eq "centos") {
             $param_centosversion = "CentOSVersion"
 
-            $iso_file_names = Get-ChildItem -Path "$PSScriptRoot\iso" | Where-Object { $_.Name -like "$OSName*.iso" }
+            $iso_file_names = Get-ChildItem -Path "$PSScriptRoot\shared\http\iso" | Where-Object { $_.Name -like "$OSName*.iso" }
             $iso_table = [ordered] @{}
             $iso_table_array = @()
             foreach ($file in $iso_file_names) {
@@ -161,18 +168,27 @@ function Build-SIUPackerImage {
     }
     #endregion Dynamic Parameters
     BEGIN {
-        #region Packer Logging
+        #region Packer Settings
+        $packer_root = "$PSScriptRoot\shared\utils\packer"
+        $packer_http_path = "{{ .HTTPIP }}:{{ .HTTPPort }}"
         $env:PACKER_LOG=1
         $env:PACKER_LOG_PATH="$PSScriptRoot\logs\packer_$OSName_$(Get-Date -UFormat "%d%b%Y_%H%M%S").log"
         if (-not (Test-Path "$PSScriptRoot\logs")) {
             New-Item -Path "$PSScriptRoot\logs" -ItemType Directory -Force
         }
-        #endregion Packer Logging
+        #endregion Packer Settings
 
-        $iso_directory = "$PSScriptRoot\iso"
-        Invoke-Expression -Command "$iso_directory\Build-HashSumFile.ps1"
+        #region HTTP Paths
+        $local_http_directory = "$PSScriptRoot\shared\http"
+        $iso_local_directory = "$local_http_directory\iso"
+        $iso_checksum_local_directory = "$iso_local_directory\checksums"
+        $iso_http_path = "http://$packer_http_path/iso"
+        $iso_checksum_http_path = "$iso_http_path/checksums"
+        #endregion HTTP Paths
+        
+        Invoke-Expression -Command "$iso_local_directory\Build-HashSumFile.ps1"
         #Regenerate the iso table
-        $iso_file_names = Get-ChildItem -Path "$iso_directory" | Where-Object { $_.Name -like "windows*.iso" }
+        $iso_file_names = Get-ChildItem -Path "$iso_local_directory" | Where-Object { $_.Name -like "windows*.iso" }
         $iso_table = [ordered] @{}
         $iso_table_array = @()
         foreach ($file in $iso_file_names) {
@@ -221,13 +237,12 @@ function Build-SIUPackerImage {
                         vm_name = "packer`-$OSName`-$($CurrentWindowsObject.OSVersion)`-$($CurrentWindowsObject.OSType)`-$($CurrentWindowsObject.OSArch)"
                         build_type = "$OSBuildType"
                         iso_url = "$($iso_file_names -match $CurrentWindowsObject.OSVersion)"
-                        iso_checksum = "$(Get-ChildItem -Path `"$iso_directory`" | Where-Object {($_.Extension -eq `".txt`") -and ($_.BaseName -match "$($CurrentWindowsObject.OSVersion)")})"
+                        iso_checksum = "$iso_checksum_http_path/$(($iso_file_names -match $CurrentWindowsObject.OSVersion).BaseName)_checksum.txt"
                         unattend_file = "$unattend_path"
-                        output_directory = "$OutputPath"
+                        output_directory = "$OutputPath\packer`-$OSName`-$($CurrentWindowsObject.OSVersion)`-$($CurrentWindowsObject.OSType)`-$($CurrentWindowsObject.OSArch)"
                         firmware = $Firmware
+                        http_directory = $local_http_directory
                     }
-
-                    $packer_data
                 }
             
                 'centos' {
@@ -237,10 +252,11 @@ function Build-SIUPackerImage {
                         vm_name = "packer`-$OSName`-$($CurrentCentOSObject.OSVersion)`-$($CurrentCentOSObject.OSType)`-$($CurrentCentOSObject.OSArch)"
                         build_type = "$OSBuildType"
                         iso_url = "$($iso_file_names -match $CurrentCentOSObject.OSVersion)"
-                        iso_checksum = "$(Get-ChildItem -Path `"$iso_directory`" | Where-Object {($_.Extension -eq `".txt`") -and ($_.BaseName -match "$($CurrentCentOSObject.OSVersion)")})"
+                        iso_checksum_url = "$(Get-ChildItem -Path `"$iso_directory`" | Where-Object {($_.Extension -eq `".txt`") -and ($_.BaseName -match "$($CurrentCentOSObject.OSVersion)")})"
                         kickstart_file = "$unattend_path"
-                        output_directory = "$OutputPath"
+                        output_directory = "$OutputPath\packer`-$OSName`-$($CurrentUbuntuObject.OSVersion)`-$($CurrentUbuntuObject.OSType)`-$($CurrentUbuntuObject.OSArch)"
                         firmware = $Firmware
+                        http_directory = $local_http_directory
                     }
                 }
             
@@ -251,10 +267,11 @@ function Build-SIUPackerImage {
                         vm_name = "packer`-$OSName`-$($CurrentUbuntuObject.OSVersion)`-$($CurrentUbuntuObject.OSType)`-$($CurrentUbuntuObject.OSArch)"
                         build_type = "$OSBuildType"
                         iso_url = "$($iso_file_names -match $CurrentUbuntuObject.OSVersion)"
-                        iso_checksum = "$(Get-ChildItem -Path `"$iso_directory`" | Where-Object {($_.Extension -eq `".txt`") -and ($_.BaseName -match "$($CurrentUbuntuObject.OSVersion)")})"
+                        iso_checksum_url = "$(Get-ChildItem -Path `"$iso_directory`" | Where-Object {($_.Extension -eq `".txt`") -and ($_.BaseName -match "$($CurrentUbuntuObject.OSVersion)")})"
                         preseed_file = "$unattend_path"
-                        output_directory = "$OutputPath"
+                        output_directory = "$OutputPath\packer`-$OSName`-$($CurrentUbuntuObject.OSVersion)`-$($CurrentUbuntuObject.OSType)`-$($CurrentUbuntuObject.OSArch)"
                         firmware = $Firmware
+                        http_directory = $local_http_directory
                     }
                 }
             }
@@ -266,16 +283,15 @@ function Build-SIUPackerImage {
                     # Build Base Image
                     if (((-not $BuildStep) -or ($BuildStep -eq "BuildBaseImage")) -and ($Hypervisor -eq "HyperV") ) {
                         $var_array += @($packer_data.GetEnumerator() | ForEach-Object {"-var `'$($_.Key)=$($_.Value)`'"})
-                        Write-Verbose -Message "$var_array"
+                        Write-Verbose -Message "$($var_array.GetEnumerator())"
                         if (($Firmware -eq "uefi") -or ($null -eq $Firmware)) {
-                            Start-Process -FilePath "$(Get-ChildItem -Path $PSScriptRoot\shared\utils\packer\ | Where-Object { $_.Extension -eq ".exe" } )" `
-                            -ArgumentList "build $($var_array.GetEnumerator()) -var-file=`"$PSScriptRoot\shared\utils\packer\dev.hyperv.gen2_$($OSName).optimized_variables.pkrvars.hcl`"`
-                            $PSScriptRoot\$OSName\server_01_base.json" -Wait -NoNewWindow
+                            Start-Process -FilePath "$(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" } )" `
+                                -ArgumentList "build $($var_array.GetEnumerator()) -var-file=$PSScriptRoot\shared\utils\packer\hyperv.gen2_$($OSName)_variables.pkrvars.hcl` $PSScriptRoot\shared\utils\packer\packer_hyperv_template.json" -Wait -NoNewWindow
+                            Write-Verbose -Message "Starting process: $(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" }) build $($var_array.GetEnumerator()) -var-file=`'$PSScriptRoot\shared\utils\packer\hyperv.gen2_windows_variables.pkrvars.hcl`' $PSScriptRoot\shared\utils\packer\packer_hyperv_template.json"
 
                         } elseif ($Firmware -eq "bios") {
-                            Start-Process -FilePath "$(Get-ChildItem -Path $PSScriptRoot\shared\utils\packer | Where-Object { $_.Extension -eq ".exe" } )" `
-                            -ArgumentList "build $($var_array.GetEnumerator()) -var-file=`"$PSScriptRoot\shared\utils\packer\dev.hyperv.gen1_$($OSName).optimized_variables.pkrvars.hcl`"`
-                             $PSScriptRoot\$OSName\server_01_base.json" -Wait -NoNewWindow
+                            Start-Process -FilePath "$(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" } )" `
+                            -ArgumentList "build $($var_array.GetEnumerator()) -var-file=``$PSScriptRoot\shared\utils\packer\dev.hyperv.gen1_$($OSName).optimized_variables.pkrvars.hcl`` $PSScriptRoot\$OSName\server_01_base.json" -Wait -NoNewWindow
                         }
                     }
                     # Build Image with Updates
