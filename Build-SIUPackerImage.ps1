@@ -170,7 +170,7 @@ function Build-SIUPackerImage {
     BEGIN {
         #region Packer Settings
         $packer_root = "$PSScriptRoot\shared\utils\packer"
-        $packer_http_path = "{{ .HTTPIP }}:{{ .HTTPPort }}"
+        $packer_http_path = '"{{ .HTTPIP }}":"{{ .HTTPPort }}"'
         $env:PACKER_LOG=1
         $env:PACKER_LOG_PATH="$PSScriptRoot\logs\packer_$OSName_$(Get-Date -UFormat "%d%b%Y_%H%M%S").log"
         if (-not (Test-Path "$PSScriptRoot\logs")) {
@@ -182,13 +182,13 @@ function Build-SIUPackerImage {
         $local_http_directory = "$PSScriptRoot\shared\http"
         $iso_local_directory = "$local_http_directory\iso"
         $iso_checksum_local_directory = "$iso_local_directory\checksums"
-        $iso_http_path = "http://$packer_http_path/iso"
+        $iso_http_path = "$packer_http_path/iso"
         $iso_checksum_http_path = "$iso_http_path/checksums"
         #endregion HTTP Paths
         
         Invoke-Expression -Command "$iso_local_directory\Build-HashSumFile.ps1"
         #Regenerate the iso table
-        $iso_file_names = Get-ChildItem -Path "$iso_local_directory" | Where-Object { $_.Name -like "windows*.iso" }
+        $iso_file_names = Get-ChildItem -Path "$iso_local_directory" | Where-Object { $_.Extension -eq ".iso" } | Select-Object -Property "BaseName"
         $iso_table = [ordered] @{}
         $iso_table_array = @()
         foreach ($file in $iso_file_names) {
@@ -196,53 +196,78 @@ function Build-SIUPackerImage {
             $iso_table = (ConvertFrom-StringData -StringData "OSName = $($iso_properties[0]) `n OSVersion = $($iso_properties[1]) `n OSType = $($iso_properties[2]) `n OSArch = $($iso_properties[3])")
             $iso_table_array += ($iso_table)
         }
-        if ($OSName -eq 'windows') {
-            # This is essential for the dynamic parameters to be recognized.
-            $WindowsVersionObj = $PSBoundParameters[$param_winversion]
-            $WindowsSkuObj = $PSBoundParameters[$param_winsku]
-            $CurrentWindowsObject = $iso_table_array | Where-Object { $_.OSVersion -eq $WindowsVersionObj }
-        }
-        elseif ($OSName -eq 'ubuntu') {
-            # This is essential for the dynamic parameters to be recognized.
-            $UbuntuVersionObj = $PSBoundParameters[$param_ubuntuversion]
-            $CurrentUbuntuObject = $iso_table_array | Where-Object { $_.OSVersion -eq $UbuntuVersionObj }
-        }
-        elseif ($OSName -eq 'centos') {
-            # This is essential for the dynamic parameters to be recognized.
-            $CentOSVersionObj = $PSBoundParameters[$param_centosversion]
-            $CurrentCentOSObject = $iso_table_array | Where-Object { $_.OSVersion -eq $CentOSVersionObj }
-
-            if ($OSBuildType -eq 'desktop') {
-                throw "Desktop deployment not available for CentOS right now. Please use `"server`" for your OSBuildType value."
-            }
-        }
     }
     
     PROCESS {
         foreach ($os in $OSName) {
+            if ($os -eq 'windows') {
+                # This is essential for the dynamic parameters to be recognized.
+                $OSVersionObj = $PSBoundParameters[$param_winversion]
+                $WindowsSkuObj = $PSBoundParameters[$param_winsku]
+                $CurrentOSObj = $iso_table_array | Where-Object { $_.OSVersion -eq $OSVersionObj }
+            }
+            elseif ($os -eq 'centos') {
+                # This is essential for the dynamic parameters to be recognized.
+                $OSVersionObj = $PSBoundParameters[$param_centosversion]
+                $CurrentOSObj = $iso_table_array | Where-Object { $_.OSVersion -eq $OSVersionObj }
+    
+                if ($OSBuildType -eq 'desktop') {
+                    throw "Desktop deployment not available for CentOS right now. Please use `"server`" for your OSBuildType value."
+                }
+            }
+            elseif ($os -eq 'ubuntu') {
+                # This is essential for the dynamic parameters to be recognized.
+                $OSVersionObj = $PSBoundParameters[$param_ubuntuversion]
+                $CurrentOSObj = $iso_table_array | Where-Object { $_.OSVersion -eq $OSVersionObj }            
+            }
+            #$current_iso_name = Get-ChildItem -Path "$PSScriptRoot\shared\http\iso" | Where-Object { $_.Name -like "$os*$OSVersionObj*.iso" } | Select-Object -ExpandProperty Name
+            #$current_iso_checksum = Get-ChildItem -Path "$PSScriptRoot\shared\http\iso\checksums" | Where-Object { $_.Name -like "$os*$OSVersionObj*.txt" } | Select-Object -ExpandProperty Name
+            #
+            #$packer_data = @{
+            #    os_name = "$OSName"
+            #    vm_name = "packer-$OSName-$($CurrentOSObj.OSVersion)-$($CurrentOSObj.OSType)-$($CurrentOSObj.OSArch)"
+            #    os_build_type = "$OSBuildType"
+            #    iso_url = "$iso_local_directory/$current_iso_name"
+            #    iso_checksum = "$iso_checksum_local_directory/$current_iso_checksum"
+            #    iso_checksum_type = "file"
+            #    unattend_file = "$PSScriptRoot\windows\unattend\$Firmware\$WindowsSkuObj\autounattend.xml"
+            #    output_directory = "$OutputPath\packer`-$OSName`-$($CurrentOSObj.OSVersion)`-$($CurrentOSObj.OSType)`-$($CurrentOSObj.OSArch)"
+            #    firmware = "$Firmware"
+            #    http_directory = "$local_http_directory"
+            #}
+
             switch ($os) {
-        
                 'windows' {
-                    switch ($WindowsSKUObj) {
-                        'SERVERSTANDARD' { $unattend_path = "$PSScriptRoot\windows\unattend\$Firmware\serverstandard\autounattend.xml" }
-                        'SERVERDATACENTER' { $unattend_path = "$PSScriptRoot\windows\unattend\$Firmware\serverdatacenter\autounattend.xml" }
-                        'SERVERSTANDARDCORE' { $unattend_path = "$PSScriptRoot\windows\unattend\$Firmware\serverstandardcore\autounattend.xml" }
-                        'SERVERDATACENTERCORE' { $unattend_path = "$PSScriptRoot\windows\unattend\$Firmware\serverdatacentercore\autounattend.xml" }
-                        'ENTERPRISE' { $unattend_path = "$PSScriptRoot\windows\unattend\$Firmware\enterprise\autounattend.xml" }
-                        'PROFESSIONAL' { $unattend_path = "$PSScriptRoot\windows\unattend\$Firmware\professional\autounattend.xml" }
-                    }
+                    $current_iso_name = Get-ChildItem -Path "$PSScriptRoot\shared\http\iso" | Where-Object { $_.Name -like "$OSName*$OSVersionObj*.iso" } | Select-Object -ExpandProperty Name
+                    $current_iso_checksum = Get-ChildItem -Path "$PSScriptRoot\shared\http\iso\checksums" | Where-Object { $_.Name -like "$OSName*$OSVersionObj*.txt" } | Select-Object -ExpandProperty Name
+                    #switch ($WindowsSKUObj) {
+                    #    'SERVERSTANDARD' { $unattend_path = "$PSScriptRoot\windows\unattend\$Firmware\serverstandard\autounattend.xml" }
+                    #    'SERVERDATACENTER' { $unattend_path = "$PSScriptRoot\windows\unattend\$Firmware\serverdatacenter\autounattend.xml" }
+                    #    'SERVERSTANDARDCORE' { $unattend_path = "$PSScriptRoot\windows\unattend\$Firmware\serverstandardcore\autounattend.xml" }
+                    #    'SERVERDATACENTERCORE' { $unattend_path = "$PSScriptRoot\windows\unattend\$Firmware\serverdatacentercore\autounattend.xml" }
+                    #    'ENTERPRISE' { $unattend_path = "$PSScriptRoot\windows\unattend\$Firmware\enterprise\autounattend.xml" }
+                    #    'PROFESSIONAL' { $unattend_path = "$PSScriptRoot\windows\unattend\$Firmware\professional\autounattend.xml" }
+                    #}
                     
                     $packer_data = @{
-                        os_name = "$($_)"
-                        vm_name = "packer`-$OSName`-$($CurrentWindowsObject.OSVersion)`-$($CurrentWindowsObject.OSType)`-$($CurrentWindowsObject.OSArch)"
-                        build_type = "$OSBuildType"
-                        iso_url = "$($iso_file_names -match $CurrentWindowsObject.OSVersion)"
-                        iso_checksum = "$iso_checksum_http_path/$(($iso_file_names -match $CurrentWindowsObject.OSVersion).BaseName)_checksum.txt"
-                        unattend_file = "$unattend_path"
-                        output_directory = "$OutputPath\packer`-$OSName`-$($CurrentWindowsObject.OSVersion)`-$($CurrentWindowsObject.OSType)`-$($CurrentWindowsObject.OSArch)"
-                        firmware = $Firmware
-                        http_directory = $local_http_directory
+                        os_name = "$OSName"
+                        vm_name = "packer-$OSName-$($CurrentOSObj.OSVersion)-$($CurrentOSObj.OSType)-$($CurrentOSObj.OSArch)"
+                        os_build_type = "$OSBuildType"
+                        iso_url = "$iso_local_directory/$current_iso_name"
+                        iso_checksum = "$iso_checksum_local_directory/$current_iso_checksum"
+                        iso_checksum_type = "file"
+                        unattend_file = "$PSScriptRoot\windows\unattend\$Firmware\$WindowsSkuObj\autounattend.xml"
+                        output_directory = "$OutputPath/packer`-$OSName`-$($CurrentOSObj.OSVersion)`-$($CurrentOSObj.OSType)`-$($CurrentOSObj.OSArch)"
+                        firmware = "$Firmware"
+                        http_directory = "$local_http_directory"
                     }
+
+                    if (-not (Test-Path "$packer_root/$($packer_data.vm_name).pkrvars.hcl")) {
+                        New-Item -Path "$packer_root/$($packer_data.vm_name).pkrvars.hcl" -ItemType File
+                    }
+
+                    Clear-Content -Path "$packer_root/$($packer_data.vm_name).pkrvars.hcl"
+                    $packer_data | ConvertTo-Json -Depth 3 | Add-Content -Path "$packer_root/$($packer_data.vm_name).pkrvars.hcl"
                 }
             
                 'centos' {
@@ -282,12 +307,11 @@ function Build-SIUPackerImage {
                 "HyperV" { 
                     # Build Base Image
                     if (((-not $BuildStep) -or ($BuildStep -eq "BuildBaseImage")) -and ($Hypervisor -eq "HyperV") ) {
-                        $var_array += @($packer_data.GetEnumerator() | ForEach-Object {"-var `'$($_.Key)=$($_.Value)`'"})
+                        $var_array += @($packer_data.GetEnumerator() | ForEach-Object {"-var `"$($_.Key)=$($_.Value)`""})
                         Write-Verbose -Message "$($var_array.GetEnumerator())"
                         if (($Firmware -eq "uefi") -or ($null -eq $Firmware)) {
-                            Start-Process -FilePath "$(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" } )" `
-                                -ArgumentList "build $($var_array.GetEnumerator()) -var-file=$PSScriptRoot\shared\utils\packer\hyperv.gen2_$($OSName)_variables.pkrvars.hcl` $PSScriptRoot\shared\utils\packer\packer_hyperv_template.json" -Wait -NoNewWindow
-                            Write-Verbose -Message "Starting process: $(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" }) build $($var_array.GetEnumerator()) -var-file=`'$PSScriptRoot\shared\utils\packer\hyperv.gen2_windows_variables.pkrvars.hcl`' $PSScriptRoot\shared\utils\packer\packer_hyperv_template.json"
+                            Start-Process -FilePath "$(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" } )" -ArgumentList "build -var-file $PSScriptRoot\shared\utils\packer\hyperv.gen2_$($OSName)_variables.pkrvars.hcl -var-file $packer_root/$($packer_data.vm_name).pkrvars.hcl $PSScriptRoot\shared\utils\packer\packer_hyperv_template.json" -Wait -NoNewWindow
+                            Write-Verbose -Message "Starting process: $(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" }) build $var_array -var-file $PSScriptRoot\shared\utils\packer\hyperv.gen2_$($OSName)_variables.pkrvars.hcl` $PSScriptRoot\shared\utils\packer\packer_hyperv_template.json"
 
                         } elseif ($Firmware -eq "bios") {
                             Start-Process -FilePath "$(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" } )" `
