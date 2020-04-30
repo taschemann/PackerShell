@@ -9,7 +9,7 @@
     "unattend_file": "", 
     "output_directory": "",
     "firmware": "",
-    "http_directory": "shared/http",
+    "http_directory": "",
 
     "disk_size": "",
     "keep_registered": "",
