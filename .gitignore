@@ -8,3 +8,4 @@ packer_cache/*
 *.iso
 *.exe
 *.log
+/windows/Deployment Tools/*
