@@ -1,15 +1,4 @@
 {
-    "os_name": "null",
-    "vm_name": "null",
-    "build_type": "null",
-    "iso_url": "null",
-    "iso_checksum": "null",
-    "iso_checksum_type": "file",
-    "unattend_file": "null",
-    "output_directory": "null",
-    "firmware": "null",
-    "http_directory": "null",
-
     "disk_size": "40960",
     "keep_registered": "false",
     "communicator": "winrm",
