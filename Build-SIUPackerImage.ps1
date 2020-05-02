@@ -22,19 +22,29 @@ class OperatingSystemArchitectureValidValues : System.Management.Automation.IVal
     }
 }
 
+class PackerTemplatesValidValues : System.Management.Automation.IValidateSetValuesGenerator {
+    [string[]] GetValidValues() {
+        $templates = Get-ChildItem -Path "$PSScriptRoot\shared\utils\packer\packer_templates" | Where-Object { ($_.Extension -eq ".json") -and ($_.Name[0] -ne '.') } | Select-Object -ExpandProperty Name
+        return $($templates | Sort-Object | Get-Unique)
+    }
+}
+
+class PackerVariableFilesValidValues : System.Management.Automation.IValidateSetValuesGenerator {
+    [string[]] GetValidValues() {
+        $templates = Get-ChildItem -Path "$PSScriptRoot\shared\utils\packer\packer_vars" | Where-Object { ($_.Extension -eq ".hcl") -and ($_.Name[0] -ne '.') } | Select-Object -ExpandProperty Name
+        return $($templates | Sort-Object | Get-Unique)
+    }
+}
+
 function Build-SIUPackerImage {
     [CmdletBinding()]
     param (
         ##
-        [Parameter(Mandatory, Position = 0, ValueFromPipelineByPropertyName)]
-        [ValidateSet("HyperV","Vsphere","Virtualbox")]
-        [string] $Hypervisor,
-        ##
-        [Parameter(Mandatory, Position=1, ValueFromPipeline)]
+        [Parameter(Mandatory, Position=0, ValueFromPipeline)]
         [ValidateSet([OperatingSystemValidValues])]
         [string[]] $OSName,
         ##
-        [Parameter(Mandatory, Position=2, ValueFromPipelineByPropertyName)]
+        [Parameter(Mandatory, Position=1, ValueFromPipelineByPropertyName)]
         [ValidateSet('desktop','server')]
         [string[]] $OSBuildType,
         ##
@@ -42,16 +52,17 @@ function Build-SIUPackerImage {
         [ValidateSet("bios","uefi")]
         [string] $Firmware = "uefi",
         ##
-        [Parameter()]
-        [ValidateSet("BuildBaseImage","BuildUpdatedBaseImage","CleanupBaseImage")]
-        [string] $BuildStep = "BuildBaseImage",
+        [Parameter(Mandatory)]
+        [ValidateSet([PackerTemplatesValidValues])]
+        [string] $PackerTemplateFile,
         ##
         [Parameter()]
+        [ValidateSet([PackerVariableFilesValidValues])]
         [string[]] $PackerVariableFile,
         ##
         [Parameter()]
-        [AllowNull()]
-        [string] $PackerTemplateFile,
+        [ValidateSet("BuildBaseImage","BuildUpdatedBaseImage","CleanupBaseImage")]
+        [string] $BuildStep = "BuildBaseImage",
         ##
         [Parameter()]
         [string] $OutputPath = "$PSScriptRoot\builds",
@@ -170,6 +181,8 @@ function Build-SIUPackerImage {
     BEGIN {
         #region Packer Settings
         $packer_root = "$PSScriptRoot\shared\utils\packer"
+        $packer_templates = "$packer_root\packer_templates"
+        $packer_vars = "$packer_root\packer_vars"
         $packer_http_path = '"{{ .HTTPIP }}":"{{ .HTTPPort }}"'
         $env:PACKER_LOG=1
         $env:PACKER_LOG_PATH="$PSScriptRoot\logs\packer_$OSName_$(Get-Date -UFormat "%d%b%Y_%H%M%S").log"
@@ -178,6 +191,7 @@ function Build-SIUPackerImage {
         }
         #endregion Packer Settings
 
+        Start-Transcript -Path "$PSScriptRoot\logs\Build-SIUPackerImage_$(Get-Date -UFormat "%d%b%Y_%H%M%S").log" -IncludeInvocationHeader
         #region HTTP Paths
         $local_http_directory = "$PSScriptRoot\shared\http"
         $iso_local_directory = "$local_http_directory\iso"
@@ -220,154 +234,84 @@ function Build-SIUPackerImage {
                 $OSVersionObj = $PSBoundParameters[$param_ubuntuversion]
                 $CurrentOSObj = $iso_table_array | Where-Object { $_.OSVersion -eq $OSVersionObj }            
             }
-            #$current_iso_name = Get-ChildItem -Path "$PSScriptRoot\shared\http\iso" | Where-Object { $_.Name -like "$os*$OSVersionObj*.iso" } | Select-Object -ExpandProperty Name
-            #$current_iso_checksum = Get-ChildItem -Path "$PSScriptRoot\shared\http\iso\checksums" | Where-Object { $_.Name -like "$os*$OSVersionObj*.txt" } | Select-Object -ExpandProperty Name
-            #
-            #$packer_data = @{
-            #    os_name = "$OSName"
-            #    vm_name = "packer-$OSName-$($CurrentOSObj.OSVersion)-$($CurrentOSObj.OSType)-$($CurrentOSObj.OSArch)"
-            #    os_build_type = "$OSBuildType"
-            #    iso_url = "$iso_local_directory/$current_iso_name"
-            #    iso_checksum = "$iso_checksum_local_directory/$current_iso_checksum"
-            #    iso_checksum_type = "file"
-            #    unattend_file = "$PSScriptRoot\windows\unattend\$Firmware\$WindowsSkuObj\autounattend.xml"
-            #    output_directory = "$OutputPath\packer`-$OSName`-$($CurrentOSObj.OSVersion)`-$($CurrentOSObj.OSType)`-$($CurrentOSObj.OSArch)"
-            #    firmware = "$Firmware"
-            #    http_directory = "$local_http_directory"
-            #}
 
-            switch ($os) {
-                'windows' {
-                    $current_iso_name = Get-ChildItem -Path "$PSScriptRoot\shared\http\iso" | Where-Object { $_.Name -like "$OSName*$OSVersionObj*.iso" } | Select-Object -ExpandProperty Name
-                    $current_iso_checksum = Get-ChildItem -Path "$PSScriptRoot\shared\http\iso\checksums" | Where-Object { $_.Name -like "$OSName*$OSVersionObj*.txt" } | Select-Object -ExpandProperty Name
-                    #switch ($WindowsSKUObj) {
-                    #    'SERVERSTANDARD' { $unattend_path = "$PSScriptRoot\windows\unattend\$Firmware\serverstandard\autounattend.xml" }
-                    #    'SERVERDATACENTER' { $unattend_path = "$PSScriptRoot\windows\unattend\$Firmware\serverdatacenter\autounattend.xml" }
-                    #    'SERVERSTANDARDCORE' { $unattend_path = "$PSScriptRoot\windows\unattend\$Firmware\serverstandardcore\autounattend.xml" }
-                    #    'SERVERDATACENTERCORE' { $unattend_path = "$PSScriptRoot\windows\unattend\$Firmware\serverdatacentercore\autounattend.xml" }
-                    #    'ENTERPRISE' { $unattend_path = "$PSScriptRoot\windows\unattend\$Firmware\enterprise\autounattend.xml" }
-                    #    'PROFESSIONAL' { $unattend_path = "$PSScriptRoot\windows\unattend\$Firmware\professional\autounattend.xml" }
-                    #}
-                    
-                    $packer_data = @{
-                        os_name = "$OSName"
-                        vm_name = "packer-$OSName-$($CurrentOSObj.OSVersion)-$($CurrentOSObj.OSType)-$($CurrentOSObj.OSArch)"
-                        os_build_type = "$OSBuildType"
-                        iso_url = "$iso_local_directory/$current_iso_name"
-                        iso_checksum = "$iso_checksum_local_directory/$current_iso_checksum"
-                        iso_checksum_type = "file"
-                        unattend_file = "$PSScriptRoot\windows\unattend\$Firmware\$WindowsSkuObj\autounattend.xml"
-                        output_directory = "$OutputPath/packer`-$OSName`-$($CurrentOSObj.OSVersion)`-$($CurrentOSObj.OSType)`-$($CurrentOSObj.OSArch)"
-                        firmware = "$Firmware"
-                        http_directory = "$local_http_directory"
-                    }
+            $current_iso_name = Get-ChildItem -Path "$PSScriptRoot\shared\http\iso" | Where-Object { $_.Name -like "$os*$OSVersionObj*.iso" } | Select-Object -ExpandProperty Name
+            $current_iso_checksum = Get-ChildItem -Path "$PSScriptRoot\shared\http\iso\checksums" | Where-Object { $_.Name -like "$os*$OSVersionObj*.txt" } | Select-Object -ExpandProperty Name
+            
+            $packer_data = Get-Content -Path $PackerTemplateFile | ConvertFrom-Json -AsHashtable | Select-Object -ExpandProperty variables
+            $packer_data.os_name = "$os"
+            $packer_data.vm_name = "packer-$os-$($CurrentOSObj.OSVersion)-$($CurrentOSObj.OSType)-$($CurrentOSObj.OSArch)"
+            $packer_data.os_build_type = "$OSBuildType"
+            $packer_data.iso_url = "$iso_local_directory\$current_iso_name"
+            $packer_data.iso_checksum = "$iso_checksum_local_directory\$current_iso_checksum"
+            $packer_data.iso_checksum_type = "file"
+            $packer_data.unattend_file = "$PSScriptRoot\windows\unattend\$Firmware\$WindowsSkuObj\autounattend.xml"
+            $packer_data.output_directory = "$OutputPath\packer`-$os`-$($CurrentOSObj.OSVersion)`-$($CurrentOSObj.OSType)`-$($CurrentOSObj.OSArch)"
+            $packer_data.firmware = "$Firmware"
+            $packer_data.http_directory = "$local_http_directory"
 
-                    if (-not (Test-Path "$packer_root/$($packer_data.vm_name).pkrvars.hcl")) {
-                        New-Item -Path "$packer_root/$($packer_data.vm_name).pkrvars.hcl" -ItemType File
-                    }
-
-                    Clear-Content -Path "$packer_root/$($packer_data.vm_name).pkrvars.hcl"
-                    $packer_data | ConvertTo-Json -Depth 3 | Add-Content -Path "$packer_root/$($packer_data.vm_name).pkrvars.hcl"
-                }
-            
-                'centos' {
-            
-                    $packer_data = @{
-                        os_name = "$($_)"
-                        vm_name = "packer`-$OSName`-$($CurrentCentOSObject.OSVersion)`-$($CurrentCentOSObject.OSType)`-$($CurrentCentOSObject.OSArch)"
-                        build_type = "$OSBuildType"
-                        iso_url = "$($iso_file_names -match $CurrentCentOSObject.OSVersion)"
-                        iso_checksum_url = "$(Get-ChildItem -Path `"$iso_directory`" | Where-Object {($_.Extension -eq `".txt`") -and ($_.BaseName -match "$($CurrentCentOSObject.OSVersion)")})"
-                        kickstart_file = "$unattend_path"
-                        output_directory = "$OutputPath\packer`-$OSName`-$($CurrentUbuntuObject.OSVersion)`-$($CurrentUbuntuObject.OSType)`-$($CurrentUbuntuObject.OSArch)"
-                        firmware = $Firmware
-                        http_directory = $local_http_directory
-                    }
-                }
-            
-                'ubuntu' {
-            
-                    $packer_data = @{
-                        os_name = "$($_)"
-                        vm_name = "packer`-$OSName`-$($CurrentUbuntuObject.OSVersion)`-$($CurrentUbuntuObject.OSType)`-$($CurrentUbuntuObject.OSArch)"
-                        build_type = "$OSBuildType"
-                        iso_url = "$($iso_file_names -match $CurrentUbuntuObject.OSVersion)"
-                        iso_checksum_url = "$(Get-ChildItem -Path `"$iso_directory`" | Where-Object {($_.Extension -eq `".txt`") -and ($_.BaseName -match "$($CurrentUbuntuObject.OSVersion)")})"
-                        preseed_file = "$unattend_path"
-                        output_directory = "$OutputPath\packer`-$OSName`-$($CurrentUbuntuObject.OSVersion)`-$($CurrentUbuntuObject.OSType)`-$($CurrentUbuntuObject.OSArch)"
-                        firmware = $Firmware
-                        http_directory = $local_http_directory
-                    }
-                }
+            if (-not (Test-Path "$packer_vars\$($packer_data.vm_name).pkrvars.hcl")) {
+                New-Item -Path "$packer_vars\$($packer_data.vm_name).pkrvars.hcl" -ItemType File
             }
+
+            Clear-Content -Path "$packer_vars\$($packer_data.vm_name).pkrvars.hcl" -ErrorAction SilentlyContinue
+            #$packer_data | ConvertTo-Json -Depth 3 | Add-Content -Path "$packer_root/$($packer_data.vm_name).pkrvars.hcl"
+
             
             # Run the build in multiple steps to prevent loss of time in case a build fails somewhere in the middle.
-            
-            switch ($Hypervisor) {
-                "HyperV" { 
-                    # Build Base Image
-                    if (((-not $BuildStep) -or ($BuildStep -eq "BuildBaseImage")) -and ($Hypervisor -eq "HyperV") ) {
-                        $var_array += @($packer_data.GetEnumerator() | ForEach-Object {"-var `"$($_.Key)=$($_.Value)`""})
-                        Write-Verbose -Message "$($var_array.GetEnumerator())"
-                        if (($Firmware -eq "uefi") -or ($null -eq $Firmware)) {
-                            Start-Process -FilePath "$(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" } )" -ArgumentList "build -var-file $PSScriptRoot\shared\utils\packer\hyperv.gen2_$($OSName)_variables.pkrvars.hcl -var-file $packer_root/$($packer_data.vm_name).pkrvars.hcl $PSScriptRoot\shared\utils\packer\packer_hyperv_template.json" -Wait -NoNewWindow
-                            Write-Verbose -Message "Starting process: $(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" }) build $var_array -var-file $PSScriptRoot\shared\utils\packer\hyperv.gen2_$($OSName)_variables.pkrvars.hcl` $PSScriptRoot\shared\utils\packer\packer_hyperv_template.json"
+            switch ($BuildStep) {
 
-                        } elseif ($Firmware -eq "bios") {
-                            Start-Process -FilePath "$(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" } )" `
-                            -ArgumentList "build $($var_array.GetEnumerator()) -var-file=``$PSScriptRoot\shared\utils\packer\dev.hyperv.gen1_$($OSName).optimized_variables.pkrvars.hcl`` $PSScriptRoot\$OSName\server_01_base.json" -Wait -NoNewWindow
-                        }
-                    }
-                    # Build Image with Updates
-                    #if (($null -eq $BuildStep) -or ($BuildStep -eq "BuildUpdatedBaseImage")) {
-                    #    Start-Process -FilePath 'packer.exe' -ArgumentList "build -var `"os_name=$($packer_data.os_name)`" .\02_winserver_updates.json" -Wait -NoNewWindow
-                    #}
-                    # Cleanup Updated Image
-                    #if (($null -eq $BuildStep) -or ($BuildStep -eq "CleanupBaseImage")) {
-                    #    Start-Process -FilePath 'packer.exe' -ArgumentList "build -var `"os_name=$($packer_data.os_name)`" .\03_winserver_cleanup.json" -Wait -NoNewWindow
-                    #}
-                 }
-                "vSphere" { 
+                "BuildBaseImage" { 
                     # Build Base Image
-                    if ((-not $BuildStep) -or ($BuildStep -eq "BuildBaseImage")) {
-                        if ($Firmware -eq "bios") {
-                            Start-Process -FilePath 'packer.exe' -ArgumentList "build -only=hyperv-bios -var `"os_name=$($packer_data.os_name)`" -var `"vm_name=$($packer_data.vm_name)`" -var `"iso_url=$($packer_data.iso_url)`" -var `"unattend_file=$($packer_data.unattend_file)`" -var `"cpu=$($packer_data.cpu)`" -var `"ram_size=$($packer_data.ram_size)`" -var `"disk_size=$($packer_data.disk_size)`" -var `"output_directory=$($packer_data.output_directory)`" .\windows\server_01_base.json" -Wait -NoNewWindow   
-                        } elseif ($Firmware -eq "uefi") {
-                            Start-Process -FilePath 'packer.exe' -ArgumentList "build -only=hyperv-uefi -var `"os_name=$($packer_data.os_name)`" -var `"vm_name=$($packer_data.vm_name)`" -var `"iso_url=$($packer_data.iso_url)`" -var `"unattend_file=$($packer_data.unattend_file)`" -var `"cpu=$($packer_data.cpu)`" -var `"ram_size=$($packer_data.ram_size)`" -var `"disk_size=$($packer_data.disk_size)`" -var `"output_directory=$($packer_data.output_directory)`" .\windows\server_01_base.json" -Wait -NoNewWindow
+                    $templates = Get-ChildItem -Path ".\shared\utils\packer\packer_vars" | Where-Object { ($_.Extension -eq ".hcl") -and ($_.Name[0] -ne '.') } | Select-Object -ExpandProperty FullName
+                    foreach ($template in $templates) {
+                        foreach ($varfile in $PackerVariableFile) {
+                            if ($template -match $varfile) {
+                                $var_file_array += @($template | ForEach-Object {"-var-file `"$_`""} )
+                            }
                         }
                     }
+
+                    Write-Verbose -Message "Starting process: $(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" }) build -var-file $packer_vars\hyperv.gen2_$($OSName)_variables.pkrvars.hcl -var-file $packer_vars/$($packer_data.vm_name).pkrvars.hcl -force $packer_templates\$PackerTemplateFile"
+                    Start-Process -FilePath "$(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" } )" -ArgumentList "build $var_file_array -var-file `"$packer_root\$($packer_data.vm_name).pkrvars.hcl`" -force $packer_templates\$PackerTemplateFile" -Wait -NoNewWindow 
+                }
+
+                "BuildUpdatedBaseImage" { 
                     # Build Image with Updates
-                    #if (($null -eq $BuildStep) -or ($BuildStep -eq "BuildUpdatedBaseImage")) {
-                    #    Start-Process -FilePath 'packer.exe' -ArgumentList "build -var `"os_name=$($packer_data.os_name)`" .\02_winserver_updates.json" -Wait -NoNewWindow
-                    #}
-                    # Cleanup Updated Image
-                    #if (($null -eq $BuildStep) -or ($BuildStep -eq "CleanupBaseImage")) {
-                    #    Start-Process -FilePath 'packer.exe' -ArgumentList "build -var `"os_name=$($packer_data.os_name)`" .\03_winserver_cleanup.json" -Wait -NoNewWindow
-                    #}
-                 }
-                "Virtualbox" { 
-                    # Build Base Image
-                    if (((-not $BuildStep) -or ($BuildStep -eq "BuildBaseImage")) -and ($Hypervisor -eq "HyperV") ) {
-                        if ($Firmware -eq "bios") {
-                            Start-Process -FilePath 'packer.exe' -ArgumentList "build -only=hyperv-bios -var `"os_name=$($packer_data.os_name)`" -var `"vm_name=$($packer_data.vm_name)`" -var `"iso_url=$($packer_data.iso_url)`" -var `"unattend_file=$($packer_data.unattend_file)`" -var `"cpu=$($packer_data.cpu)`" -var `"ram_size=$($packer_data.ram_size)`" -var `"disk_size=$($packer_data.disk_size)`" -var `"output_directory=$($packer_data.output_directory)`" .\windows\server_01_base.json" -Wait -NoNewWindow   
-                        } elseif ($Firmware -eq "uefi") {
-                            Start-Process -FilePath 'packer.exe' -ArgumentList "build -only=hyperv-uefi -var `"os_name=$($packer_data.os_name)`" -var `"vm_name=$($packer_data.vm_name)`" -var `"iso_url=$($packer_data.iso_url)`" -var `"unattend_file=$($packer_data.unattend_file)`" -var `"cpu=$($packer_data.cpu)`" -var `"ram_size=$($packer_data.ram_size)`" -var `"disk_size=$($packer_data.disk_size)`" -var `"output_directory=$($packer_data.output_directory)`" .\windows\server_01_base.json" -Wait -NoNewWindow
+                    $templates = Get-ChildItem -Path "$PSScriptRoot\shared\utils\packer\packer_vars" | Where-Object { ($_.Extension -eq ".hcl") -and ($_.Name[0] -ne '.') } | Select-Object -ExpandProperty FullName
+                    foreach ($template in $templates) {
+                        foreach ($varfile in $PackerVariableFile) {
+                            if ($template -match $varfile) {
+                                $var_file_array += @($template | ForEach-Object {"-var-file `"$_`""} )
+                            }
                         }
                     }
-                    # Build Image with Updates
-                    #if (($null -eq $BuildStep) -or ($BuildStep -eq "BuildUpdatedBaseImage")) {
-                    #    Start-Process -FilePath 'packer.exe' -ArgumentList "build -var `"os_name=$($packer_data.os_name)`" .\02_winserver_updates.json" -Wait -NoNewWindow
-                    #}
+
+                    Write-Verbose -Message "Starting process: $(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" }) build -var-file $packer_vars\hyperv.gen2_$($OSName)_variables.pkrvars.hcl -var-file $packer_vars/$($packer_data.vm_name).pkrvars.hcl -force $packer_templates\$PackerTemplateFile"
+                    Start-Process -FilePath "$(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" } )" -ArgumentList "build $var_file_array -var-file `"$packer_root\$($packer_data.vm_name).pkrvars.hcl`" -force $packer_templates\$PackerTemplateFile" -Wait -NoNewWindow 
+                }
+
+                "CleanupBaseImage" { 
                     # Cleanup Updated Image
-                    #if (($null -eq $BuildStep) -or ($BuildStep -eq "CleanupBaseImage")) {
-                    #    Start-Process -FilePath 'packer.exe' -ArgumentList "build -var `"os_name=$($packer_data.os_name)`" .\03_winserver_cleanup.json" -Wait -NoNewWindow
-                    #}
-                 }
-                Default {}
+                    $templates = Get-ChildItem -Path ".\shared\utils\packer\packer_vars" | Where-Object { ($_.Extension -eq ".hcl") -and ($_.Name[0] -ne '.') } | Select-Object -ExpandProperty FullName
+                    foreach ($template in $templates) {
+                        foreach ($varfile in $PackerVariableFile) {
+                            if ($template -match $varfile) {
+                                $var_file_array += @($template | ForEach-Object {"-var-file `"$_`""} )
+                            }
+                        }
+                    }
+
+                    Write-Verbose -Message "Starting process: $(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" }) build -var-file $packer_vars\hyperv.gen2_$($OSName)_variables.pkrvars.hcl -var-file $packer_vars/$($packer_data.vm_name).pkrvars.hcl -force $packer_templates\$PackerTemplateFile"
+                    Start-Process -FilePath "$(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" } )" -ArgumentList "build $var_file_array -var-file `"$packer_root\$($packer_data.vm_name).pkrvars.hcl`" -force $packer_templates\$PackerTemplateFile" -Wait -NoNewWindow 
+                }
+                Default {  }
             }
         }
     }
     
-    END {}
+    END {
+        Stop-Transcript
+    }
     
 }
