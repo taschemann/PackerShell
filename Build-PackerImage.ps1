@@ -30,7 +30,7 @@ function Build-PackerImage {
         Builds an operating system image from a base ISO utilizing Packer. Supports Windows, Ubuntu, and CentOS.
     .EXAMPLE
         PS C:\> Build-PackerImage -PackerTemplateFile "/path/to/template.json"
-        Builds packer template.json file.
+        Builds packer template.json file. Doesn't actually work yet.
     .EXAMPLE
         PS C:\> Build-PackerImage -OSName windows -OSBuildType desktop -WindowsVersion '1909.3.2020' -WindowsSKU ENTERPRISE -PackerTemplateFile hyperv_template.json
         Builds an Enterprise Windows image using a Packer Hyper-V template.
@@ -385,13 +385,8 @@ function Build-PackerImage {
                 }
                 Default { 
                     # Build Specified Configuration
-                    #foreach ($varfile in $PackerVariableFile) {
-                    #    $var_file_array += @($varfile | ForEach-Object {"-var-file $packer_vars\$_"} )
-                    #    $var_file_array += "-var-file $packer_vars\$($packer_data.vm_name).pkrvars.hcl"
-                    #}
 
                     Write-Verbose -Message "Starting process: $(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" }) -ArgumentList build $($var_file_array -join ' ') -force $packer_templates\$PackerTemplateFile"
-                    #Start-Process -FilePath "$(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" } )" -ArgumentList "build $var_file_array -var-file $packer_vars\$($packer_data.vm_name).pkrvars.hcl -force $packer_templates\$PackerTemplateFile" -Wait -NoNewWindow 
                     Start-Process -FilePath "$(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" } | Select-Object -Last 1)" -ArgumentList "build -var-file $packer_vars\$($packer_data.vm_name).pkrvars.hcl -force $packer_templates\$PackerTemplateFile" -Wait -NoNewWindow 
                  }
             }
