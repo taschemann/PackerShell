@@ -10,6 +10,7 @@
     "output_directory": "",
     "firmware": "",
     "http_directory": "",
+    "secondary_iso_images": "",
 
     "disk_size": "",
     "keep_registered": "",
@@ -49,7 +50,7 @@
           "use_fixed_vhd_format": "{{user `use_fixed_vhd_format`}}",
           "disk_block_size": "{{user `disk_block_size`}}",
           "memory": "{{user `memory`}}",
-          "secondary_iso_images": "{{user `secondary_iso_image`}}",
+          "secondary_iso_images": "{{user `secondary_iso_images`}}",
           "guest_additions_mode": "{{user `guest_additions_mode`}}",
           "guest_additions_path": "{{user `guest_additions_path`}}",
           "vm_name": "{{user `vm_name`}}",
@@ -77,7 +78,7 @@
           "http_port_max": "{{user `http_port_max`}}",
           "shutdown_command": "{{user `shutdown_command`}}",
           "shutdown_timeout": "{{user `shutdown_timeout`}}",
-          
+
           "boot_wait": "-1s",
           "boot_command": [
             "a<enter><wait>a<enter><wait>a<enter><wait>a<enter>"
