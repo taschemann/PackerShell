@@ -30,19 +30,16 @@ function Build-PackerImage {
         Builds an operating system image from a base ISO utilizing Packer. Supports Windows, Ubuntu, and CentOS.
     .EXAMPLE
         PS C:\> Build-PackerImage -PackerTemplateFile "/path/to/template.json"
-        Explanation of what the example does
+        Builds packer template.json file.
     .EXAMPLE
-        PS C:\> Build-PackerImage -PackerTemplateFile "/path/to/template.json"
-        Explanation of what the example does
+        PS C:\> Build-PackerImage -OSName windows -OSBuildType desktop -WindowsVersion '1909.3.2020' -WindowsSKU ENTERPRISE -PackerTemplateFile hyperv_template.json
+        Builds an Enterprise Windows image using a Packer Hyper-V template.
     .EXAMPLE
-        PS C:\> Build-PackerImage -PackerTemplateFile "/path/to/template.json"
-        Explanation of what the example does
+        PS C:\> Build-PackerImage -OSName windows -OSBuildType server -WindowsVersion '2019.1809.2' -WindowsSKU SERVERSTANDARD -PackerVariableFile hyperv.gen2_windows_variables1.pkrvars.hcl,hyperv.gen2_windows_variables2.pkrvars.hcl -PackerTemplateFile windows-hyperv.json
+        Builds a SERVERSTANDARD Windows image and passes variables from multiple variable files to a Packer Hyper-V template. 
     .EXAMPLE
-        PS C:\> Build-PackerImage -PackerTemplateFile "/path/to/template.json"
-        Explanation of what the example does
-    .EXAMPLE
-        PS C:\> Build-PackerImage -PackerTemplateFile "/path/to/template.json"
-        Explanation of what the example does
+        PS C:\> Build-PackerImage -OSName windows -OSBuildType desktop -WindowsVersion '1909.3.2020' -WindowsSKU ENTERPRISE -PackerVariableFile packer-windows-1909.3.2020-desktop-x64.pkrvars.hcl -OverrideDefaultValues -PackerTemplateFile windows-hyperv.json
+        Reuses generated variable file and uses -OverrideDefaultValues to skip setting default values. All variable values are supplied by the variable file.
     .INPUTS
         Inputs (if any)
     .OUTPUTS
@@ -322,7 +319,7 @@ function Build-PackerImage {
                 $packer_data["vm_name"] = "packer-$os-$($CurrentOSObj.OSVersion)-$($CurrentOSObj.OSType)-$($CurrentOSObj.OSArch)"
                 $packer_data["os_build_type"] = "$OSBuildType"
                 $packer_data["iso_url"] = "$iso_local_directory\$current_iso_name"
-                $packer_data["iso_checksum_url"] = "$iso_checksum_http_path/$current_iso_checksum"
+                $packer_data["iso_checksum"] = "$iso_checksum_local_directory\$current_iso_checksum"
                 $packer_data["iso_checksum_type"] = "file"
                 $packer_data["unattend_file"] = "$PSScriptRoot\$os\unattend\$Firmware\$WindowsSkuObj\autounattend.xml"
                 $packer_data["output_directory"] = "$OutputPath\packer`-$os`-$($CurrentOSObj.OSVersion)`-$($CurrentOSObj.OSType)`-$($CurrentOSObj.OSArch)\{{.Provider}}"
@@ -395,7 +392,7 @@ function Build-PackerImage {
 
                     Write-Verbose -Message "Starting process: $(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" }) -ArgumentList build $($var_file_array -join ' ') -force $packer_templates\$PackerTemplateFile"
                     #Start-Process -FilePath "$(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" } )" -ArgumentList "build $var_file_array -var-file $packer_vars\$($packer_data.vm_name).pkrvars.hcl -force $packer_templates\$PackerTemplateFile" -Wait -NoNewWindow 
-                    Start-Process -FilePath "$(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" } )" -ArgumentList "build -var-file $packer_vars\$($packer_data.vm_name).pkrvars.hcl -force $packer_templates\$PackerTemplateFile" -Wait -NoNewWindow 
+                    Start-Process -FilePath "$(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" } | Select-Object -Last 1)" -ArgumentList "build -var-file $packer_vars\$($packer_data.vm_name).pkrvars.hcl -force $packer_templates\$PackerTemplateFile" -Wait -NoNewWindow 
                  }
             }
         }
