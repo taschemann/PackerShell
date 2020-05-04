@@ -22,7 +22,34 @@ class OperatingSystemArchitectureValidValues : System.Management.Automation.IVal
     }
 }
 
-function Build-SIUPackerImage {
+function Build-PackerImage {
+    <#
+    .SYNOPSIS
+        Builds an operating system image from a base ISO utilizing Packer.
+    .DESCRIPTION
+        Builds an operating system image from a base ISO utilizing Packer. Supports Windows, Ubuntu, and CentOS.
+    .EXAMPLE
+        PS C:\> Build-PackerImage -PackerTemplateFile "/path/to/template.json"
+        Explanation of what the example does
+    .EXAMPLE
+        PS C:\> Build-PackerImage -PackerTemplateFile "/path/to/template.json"
+        Explanation of what the example does
+    .EXAMPLE
+        PS C:\> Build-PackerImage -PackerTemplateFile "/path/to/template.json"
+        Explanation of what the example does
+    .EXAMPLE
+        PS C:\> Build-PackerImage -PackerTemplateFile "/path/to/template.json"
+        Explanation of what the example does
+    .EXAMPLE
+        PS C:\> Build-PackerImage -PackerTemplateFile "/path/to/template.json"
+        Explanation of what the example does
+    .INPUTS
+        Inputs (if any)
+    .OUTPUTS
+        Output (if any)
+    .NOTES
+        Author: Thomas Aschemann
+    #>
     [CmdletBinding()]
     param (
         ##
@@ -199,7 +226,7 @@ function Build-SIUPackerImage {
         }
         #endregion Packer Settings
 
-        Start-Transcript -Path "$PSScriptRoot\logs\Build-SIUPackerImage_$(Get-Date -UFormat "%d%b%Y_%H%M%S").log" -IncludeInvocationHeader
+        Start-Transcript -Path "$PSScriptRoot\logs\Build-PackerImage_$(Get-Date -UFormat "%d%b%Y_%H%M%S").log" -IncludeInvocationHeader
         #region HTTP Paths
         $local_http_directory = "$PSScriptRoot\shared\http"
         $iso_local_directory = "$local_http_directory\iso"
@@ -222,6 +249,7 @@ function Build-SIUPackerImage {
     
     PROCESS {
         foreach ($os in $OSName) {
+
             if ($os -eq 'windows') {
                 # This is essential for the dynamic parameters to be recognized.
                 $OSVersionObj = $PSBoundParameters[$param_winversion]
@@ -229,20 +257,26 @@ function Build-SIUPackerImage {
                 $PackerTemplateFile = $PSBoundParameters[$param_wintemplatefile]
                 $PackerVariableFile = $PSBoundParameters[$param_winvariablefile]
                 $CurrentOSObj = $iso_table_array | Where-Object { $_.OSVersion -eq $OSVersionObj }
+                #if ($OSBuildType -notin $CurrentOSObj) {
+                #    throw "`'$OSBuildType`' build is not available for $os right now. Please try another build type."
+                #}
             }
             elseif ($os -eq 'centos') {
                 # This is essential for the dynamic parameters to be recognized.
                 $OSVersionObj = $PSBoundParameters[$param_centosversion]
                 $CurrentOSObj = $iso_table_array | Where-Object { $_.OSVersion -eq $OSVersionObj }
     
-                if ($OSBuildType -eq 'desktop') {
-                    throw "Desktop deployment not available for CentOS right now. Please use `"server`" for your OSBuildType value."
+                if ($OSBuildType -notin $CurrentOSObj) {
+                    throw "`'$OSBuildType`' build is not available for $os right now. Please try another build type."
                 }
             }
             elseif ($os -eq 'ubuntu') {
                 # This is essential for the dynamic parameters to be recognized.
                 $OSVersionObj = $PSBoundParameters[$param_ubuntuversion]
                 $CurrentOSObj = $iso_table_array | Where-Object { $_.OSVersion -eq $OSVersionObj }            
+                if ($OSBuildType -notin $CurrentOSObj) {
+                    throw "`'$OSBuildType`' build is not available for $os right now. Please try another build type."
+                }
             }
 
             $current_iso_name = Get-ChildItem -Path "$local_http_directory\iso" | Where-Object { $_.Name -like "$os*$OSVersionObj*.iso" } | Select-Object -ExpandProperty Name
@@ -254,9 +288,29 @@ function Build-SIUPackerImage {
             $packer_data_keys = @("os_name","vm_name","os_build_type","iso_url","iso_checksum","iso_checksum_type","unattend_file","output_directory","firmware","http_directory")
             foreach ($key in $packer_data_keys) {
                 if ($key -notin $packer_data.Keys) {
-                    $packer_data.Add("$key", $null)
+                    $packer_data.Add("$key", '""')
                 }
             }
+            
+            #Loop through variables files and merge all the variable tables together, then merge that with what's in $packer_data
+            foreach ($file in $PackerVariableFile) {
+                $packer_varfile = Get-Content -Path "$packer_vars\$file" | ConvertFrom-Json -AsHashtable
+
+                foreach ($var in $packer_varfile.Keys) {
+                    if ($var -notin $packer_data.Keys) {
+                        $packer_data.Add($var, $packer_varfile[$var])
+                    }
+                    else {
+                        if (($null -eq $packer_varfile[$var]) -or ($packer_varfile[$var] -eq '""')) {
+                            Write-Output "$var is null or empty in $file. Not overriding set value."
+                        }
+                        else {
+                            $packer_data[$var] = $packer_varfile[$var]
+                        }
+                    }
+                }
+            }
+
             ## TODO 
             ## Get all required variables from template file
             ## Merge all variable files into single hashtable
@@ -264,16 +318,16 @@ function Build-SIUPackerImage {
             ## Dump new hashtable to variable file and feed it to packer
             ## This will help control variables being overwritten accidentally 
             if (-not($OverrideDefaultValues)) {
-                $packer_data.os_name = "$os"
-                $packer_data.vm_name = "packer-$os-$($CurrentOSObj.OSVersion)-$($CurrentOSObj.OSType)-$($CurrentOSObj.OSArch)"
-                $packer_data.os_build_type = "$OSBuildType"
-                $packer_data.iso_url = "$iso_local_directory\$current_iso_name"
-                $packer_data.iso_checksum = "$iso_checksum_http_path/$current_iso_checksum"
-                $packer_data.iso_checksum_type = "file"
-                $packer_data.unattend_file = "$PSScriptRoot\$os\unattend\$Firmware\$WindowsSkuObj\autounattend.xml"
-                $packer_data.output_directory = "$OutputPath\packer`-$os`-$($CurrentOSObj.OSVersion)`-$($CurrentOSObj.OSType)`-$($CurrentOSObj.OSArch)\{{.Provider}}"
-                $packer_data.firmware = "$Firmware"
-                $packer_data.http_directory = "$local_http_directory"   
+                $packer_data["os_name"] = "$os"
+                $packer_data["vm_name"] = "packer-$os-$($CurrentOSObj.OSVersion)-$($CurrentOSObj.OSType)-$($CurrentOSObj.OSArch)"
+                $packer_data["os_build_type"] = "$OSBuildType"
+                $packer_data["iso_url"] = "$iso_local_directory\$current_iso_name"
+                $packer_data["iso_checksum_url"] = "$iso_checksum_http_path/$current_iso_checksum"
+                $packer_data["iso_checksum_type"] = "file"
+                $packer_data["unattend_file"] = "$PSScriptRoot\$os\unattend\$Firmware\$WindowsSkuObj\autounattend.xml"
+                $packer_data["output_directory"] = "$OutputPath\packer`-$os`-$($CurrentOSObj.OSVersion)`-$($CurrentOSObj.OSType)`-$($CurrentOSObj.OSArch)\{{.Provider}}"
+                $packer_data["firmware"] = "$Firmware"
+                $packer_data["http_directory"] = "$local_http_directory"   
             }
             else {
                 Write-Output "All variable values being written from variable file. Not setting variables."
@@ -334,14 +388,14 @@ function Build-SIUPackerImage {
                 }
                 Default { 
                     # Build Specified Configuration
-                    foreach ($varfile in $PackerVariableFile) {
-                        $var_file_array += @($varfile | ForEach-Object {"-var-file $packer_vars\$_"} )
-                        $var_file_array += "-var-file $packer_vars\$($packer_data.vm_name).pkrvars.hcl"
-                    }
+                    #foreach ($varfile in $PackerVariableFile) {
+                    #    $var_file_array += @($varfile | ForEach-Object {"-var-file $packer_vars\$_"} )
+                    #    $var_file_array += "-var-file $packer_vars\$($packer_data.vm_name).pkrvars.hcl"
+                    #}
 
                     Write-Verbose -Message "Starting process: $(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" }) -ArgumentList build $($var_file_array -join ' ') -force $packer_templates\$PackerTemplateFile"
                     #Start-Process -FilePath "$(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" } )" -ArgumentList "build $var_file_array -var-file $packer_vars\$($packer_data.vm_name).pkrvars.hcl -force $packer_templates\$PackerTemplateFile" -Wait -NoNewWindow 
-                    Start-Process -FilePath "$(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" } )" -ArgumentList "build $($var_file_array -join ' ') -force $packer_templates\$PackerTemplateFile" -Wait -NoNewWindow 
+                    Start-Process -FilePath "$(Get-ChildItem -Path $packer_root | Where-Object { $_.Extension -eq ".exe" } )" -ArgumentList "build -var-file $packer_vars\$($packer_data.vm_name).pkrvars.hcl -force $packer_templates\$PackerTemplateFile" -Wait -NoNewWindow 
                  }
             }
         }
