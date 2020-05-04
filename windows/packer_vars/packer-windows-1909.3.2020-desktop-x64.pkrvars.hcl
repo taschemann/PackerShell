@@ -1,7 +1,7 @@
 {
   "firmware": "uefi",
   "switch_name": "packer-internal-switch",
-  "headless": "true",
+  "headless": "false",
   "iso_url": "H:\\SIUCPacker\\shared\\http\\iso\\windows-1909.3.2020-desktop-x64.iso",
   "generation": "2",
   "iso_checksum_type": "file",
@@ -20,6 +20,7 @@
   "cpus": "2",
   "keep_registered": "false",
   "iso_checksum": "H:\\SIUCPacker\\shared\\http\\iso\\checksums\\windows-1909.3.2020-desktop-x64_checksum.txt",
+  "boot_wait": "-1s",
   "memory": "2048",
   "skip_compaction": "false",
   "enable_dynamic_memory": "false",
