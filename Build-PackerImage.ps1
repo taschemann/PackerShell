@@ -1,4 +1,9 @@
 #Requires -Version 7
+## TODO
+## Add flag to disable checksums
+## Add secondary iso path parameter
+## Add custom unattend path
+
 
 class OperatingSystemValidValues : System.Management.Automation.IValidateSetValuesGenerator {
     [string[]] GetValidValues() {
@@ -282,7 +287,7 @@ function Build-PackerImage {
             #There will only ever be one Packer template. This line grabs the template file the user
             #selected and pulls the variable section out of it so we can then set any values here.
             $packer_data = Get-Content -Path "$packer_templates\$PackerTemplateFile" | ConvertFrom-Json -AsHashtable | Select-Object -ExpandProperty variables
-            $packer_data_keys = @("os_name","vm_name","os_build_type","iso_url","iso_checksum","iso_checksum_type","unattend_file","output_directory","firmware","http_directory")
+            $packer_data_keys = @("os_name","vm_name","os_build_type","iso_url","iso_checksum","iso_checksum_type","unattend_file","output_directory","firmware","http_directory","secondary_iso_images")
             foreach ($key in $packer_data_keys) {
                 if ($key -notin $packer_data.Keys) {
                     $packer_data.Add("$key", '""')
@@ -307,13 +312,8 @@ function Build-PackerImage {
                     }
                 }
             }
-
-            ## TODO 
-            ## Get all required variables from template file
-            ## Merge all variable files into single hashtable
-            ## Merge template file hashtable with variable files hashtable
-            ## Dump new hashtable to variable file and feed it to packer
-            ## This will help control variables being overwritten accidentally 
+            
+            #If the user doesn't specify the override parameter, set these values as default no matter the configuration
             if (-not($OverrideDefaultValues)) {
                 $packer_data["os_name"] = "$os"
                 $packer_data["vm_name"] = "packer-$os-$($CurrentOSObj.OSVersion)-$($CurrentOSObj.OSType)-$($CurrentOSObj.OSArch)"
@@ -324,7 +324,11 @@ function Build-PackerImage {
                 $packer_data["unattend_file"] = "$PSScriptRoot\$os\unattend\$Firmware\$WindowsSkuObj\autounattend.xml"
                 $packer_data["output_directory"] = "$OutputPath\packer`-$os`-$($CurrentOSObj.OSVersion)`-$($CurrentOSObj.OSType)`-$($CurrentOSObj.OSArch)\{{.Provider}}"
                 $packer_data["firmware"] = "$Firmware"
-                $packer_data["http_directory"] = "$local_http_directory"   
+                $packer_data["http_directory"] = "$local_http_directory"
+
+                if ($os -eq "windows") {
+                    $packer_data["secondary_iso_images"] = "$packer_root\$os\unattend\$Firmware\$WindowsSkuObj\answer.iso"
+                }
             }
             else {
                 Write-Output "All variable values being written from variable file. Not setting variables."
