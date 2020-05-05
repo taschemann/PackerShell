@@ -76,13 +76,27 @@
           "http_directory": "{{user `http_directory`}}",
           "http_port_min": "{{user `http_port_min`}}",
           "http_port_max": "{{user `http_port_max`}}",
-          "shutdown_command": "{{user `shutdown_command`}}",
-          "shutdown_timeout": "{{user `shutdown_timeout`}}",
 
+          "shutdown_command": "C:/",
+          "shutdown_timeout": "4h",
           "boot_wait": "-1s",
           "boot_command": [
             "a<enter><wait>a<enter><wait>a<enter><wait>a<enter>"
           ]
         }
+    ],
+
+    "provisioners": [
+      {
+        "type": "powershell",
+        "script": "../scripts/"
+      }
+    ],
+
+    "post-processors": [
+      {
+        "output": "{{user `output_directory`}}/{{user `vm_name`}}.box",
+        "type": "vagrant"
+      }
     ]
 }
