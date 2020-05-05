@@ -2,7 +2,7 @@
 #Author: Thomas Aschemann
 
 $unattend_root = "$PSScriptRoot"
-$unattend_files = Get-ChildItem -Recurse $unattend_root -File | Where-Object {$_.Directoryname -ne "$unattend_root"}
+$unattend_files = Get-ChildItem -Recurse $unattend_root -File | Where-Object {($_.Directoryname -ne "$unattend_root") -and ($_.Extension -ne ".iso")}
 
 if (($IsWindows) -and ($env:PROCESSOR_ARCHITECTURE -eq "amd64")) {
     $build_utils = "..\Deployment Tools\amd64"
