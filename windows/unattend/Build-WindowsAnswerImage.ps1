@@ -7,6 +7,10 @@ $unattend_files = Get-ChildItem -Recurse $unattend_root -File | Where-Object {($
 if (($IsWindows) -and ($env:PROCESSOR_ARCHITECTURE -eq "amd64")) {
     $build_utils = "..\Deployment Tools\amd64"
 
+    if (-not (Test-Path "$build_utils\Oscdimg\oscdimg.exe")) {
+        throw "oscdimg.exe not found. Please install the Windows Deployment Tools from the Windows Assessment and Deployment Toolkit."
+    }
+
     foreach ($file in $unattend_files) {
         if (Test-Path -Path "$($file.DirectoryName)\answer.iso") {
             Remove-Item -Path "$($file.DirectoryName)\answer.iso"
