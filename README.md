@@ -24,3 +24,24 @@ ISOs must be named a certain way for the script to detect them properly. The for
 Import-Module -Name ".\Build-PackerImage.ps1" -Force
 Build-PackerImage [-Parameters]
 ```
+
+## Project Structure
+/builds - Output directory for packer artifacts
+
+/centos - CentOS packer template files and centos-specific resources
+
+/logs - Build-PackerImage transcripts and packer.exe logs
+
+/shared - shared resources such as scripts, templates, var files, local playbooks, and the http root
+
+/shared/http - HTTP root folder. Files in here will be available in a Packer deployment via http://{{ .HTTPIP }}:{{ .HTTPPort }}
+
+/shared/http/iso - ISO files go here
+
+/ubuntu - Ubuntu packer template files and ubuntu-specific resources
+
+/windows - Windows packer template files, unattend files, and Windows build tools
+
+/Build-PackerImage.ps1 - primary script file
+
+/Start-DownloadPacker.ps1 - Download script for latest packer.exe. Downloads to local directory.
