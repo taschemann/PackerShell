@@ -34,5 +34,5 @@
   "enable_virtualization_extensions": "false",
   "shutdown_command": "null",
   "iso_url": "H:\\PackerShell\\shared\\http\\iso\\windows-1909.3.2020-desktop-x64.iso",
-  "headless": "true"
+  "headless": "false"
 }
