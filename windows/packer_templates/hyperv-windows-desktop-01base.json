@@ -77,20 +77,13 @@
           "http_port_min": "{{user `http_port_min`}}",
           "http_port_max": "{{user `http_port_max`}}",
 
-          "shutdown_command": "C:/",
+          "shutdown_command": "cmd.exe /c shutdown",
           "shutdown_timeout": "4h",
           "boot_wait": "-1s",
           "boot_command": [
             "a<enter><wait>a<enter><wait>a<enter><wait>a<enter>"
           ]
         }
-    ],
-
-    "provisioners": [
-      {
-        "type": "powershell",
-        "script": "../scripts/"
-      }
     ],
 
     "post-processors": [
