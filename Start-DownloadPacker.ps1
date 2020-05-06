@@ -11,7 +11,7 @@ if ($IsWindows) {
     $os = "windows"
 }
 
-$packer_bin = Get-ChildItem -Path $PSScriptRoot | Where-Object { $_.Name -eq "packer-$($packer_latest_release)-$($os)-$($env:PROCESSOR_ARCHITECTURE.Lower()).exe" } | Sort-Object | Select-Object -First 1 *
+$packer_bin = Get-ChildItem -Path $PSScriptRoot | Where-Object { $_.Name -eq "packer-$($packer_latest_release)-$($os)-$($env:PROCESSOR_ARCHITECTURE.ToLower()).exe" } | Sort-Object | Select-Object -First 1 *
 if ($null -ne $packer_bin) {
     if ($($packer_bin.Name) -match "$packer_latest_release") {
         Write-Host "Already have the latest packer."
