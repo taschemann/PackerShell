@@ -129,9 +129,9 @@
                             <PlainText>true</PlainText>
                         </Password>
                         <Group>Administrators</Group>
-                        <DisplayName>SIU Local Administrator</DisplayName>
+                        <DisplayName>IT Local Administrator</DisplayName>
                         <Name>itadm</Name>
-                        <Description>SIU IT Local Administrator</Description>
+                        <Description>IT Local Administrator</Description>
                     </LocalAccount>
                 </LocalAccounts>
             </UserAccounts>            
