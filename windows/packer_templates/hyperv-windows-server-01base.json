@@ -78,7 +78,7 @@
           "http_port_max": "{{user `http_port_max`}}",
           "shutdown_command": "{{user `shutdown_command`}}",
           "shutdown_timeout": "{{user `shutdown_timeout`}}",
-          "boot_wait": "{{user `boot_wait`}}",
+          "boot_wait": "-1s",
           "boot_command": [
             "a<enter><wait>a<enter><wait>a<enter><wait>a<enter>"
           ]
