@@ -91,6 +91,7 @@
 
     "builders": [
         {
+          "type": "virtualbox-iso",
           "disk_size": "{{user `disk_size`}}",
           "guest_additions_mode": "{{user `guest_additions_mode`}}",
           "guest_additions_path": "{{user `guest_additions_path`}}",
