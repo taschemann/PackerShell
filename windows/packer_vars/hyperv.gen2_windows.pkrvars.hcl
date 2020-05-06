@@ -8,7 +8,7 @@
   "use_fixed_vhd_format": "false",
   "disk_block_size": "32",
   "memory": "2048",
-  "switch_name": "packer-internal-switch",
+  "switch_name": "Default Switch",
   "cpus": "2",
   "generation": "2",
   "enable_mac_spoofing": "false",
