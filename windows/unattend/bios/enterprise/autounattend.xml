@@ -173,7 +173,7 @@
                 </SynchronousCommand>
                 <SynchronousCommand wcm:action="add">
                     <CommandLine>cmd.exe /c winrm quickconfig -q</CommandLine>
-                    <Order>3</Order>
+                    <Order>30</Order>
                     <Description></Description>
                     <RequiresUserInput>true</RequiresUserInput>
                 </SynchronousCommand>
