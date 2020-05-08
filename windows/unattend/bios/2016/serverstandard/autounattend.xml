@@ -52,7 +52,7 @@
                     <InstallFrom>
                         <MetaData wcm:action="add">
                             <Key>/IMAGE/NAME </Key>
-                            <Value>Windows Server 2019 SERVERSTANDARD</Value>
+                            <Value>Windows Server 2016 SERVERSTANDARD</Value>
                         </MetaData>
                     </InstallFrom>
                     <InstallTo>

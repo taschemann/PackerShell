@@ -73,7 +73,7 @@
                     <InstallFrom>
                         <MetaData wcm:action="add">
                             <Key>/IMAGE/NAME</Key>
-                            <Value>Windows 10 Enterprise</Value>
+                            <Value>Windows Server 2016 SERVERSTANDARDCORE</Value>
                         </MetaData>
                     </InstallFrom>
                 </OSImage>

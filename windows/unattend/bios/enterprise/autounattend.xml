@@ -293,12 +293,6 @@
                     <Order>46</Order>
                     <RequiresUserInput>true</RequiresUserInput>
                 </SynchronousCommand>
-                <SynchronousCommand wcm:action="add">
-                    <CommandLine>cmd.exe /c winrm quickconfig -q</CommandLine>
-                    <Order>47</Order>
-                    <Description></Description>
-                    <RequiresUserInput>true</RequiresUserInput>
-                </SynchronousCommand>
             </FirstLogonCommands>
         </component>
         <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
