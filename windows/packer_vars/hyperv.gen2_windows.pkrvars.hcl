@@ -4,6 +4,7 @@
   "communicator": "winrm",
   "winrm_username": "itadm",
   "winrm_password": "itadm",
+  "winrm_insecure": "true",
   "use_legacy_network_adapter": "false",
   "differencing_disk": "false",
   "use_fixed_vhd_format": "false",
@@ -22,5 +23,9 @@
   "http_port_min": "8000",
   "http_port_max": "9000",
   "shutdown_command": "null",
-  "shutdown_timeout": "4h"
+  "shutdown_timeout": "4h",
+  "winrm_port": "5985",
+  "winrm_use_ssl": "false",
+  "winrm_timeout": "2h",
+  "winrm_use_ntlm": "true"
 }
