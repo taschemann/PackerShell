@@ -275,14 +275,14 @@ function Build-PackerImage {
             elseif ($os -eq 'ubuntu') {
                 # This is essential for the dynamic parameters to be recognized.
                 $OSVersionObj = $PSBoundParameters[$param_ubuntuversion]
-                $CurrentOSObj = $iso_table_array | Where-Object { $_.OSVersion -eq $OSVersionObj }            
+                $CurrentOSObj = $iso_table_array | Where-Object { $_.OSVersion -eq $OSVersionObj }
                 if ($OSBuildType -notin $CurrentOSObj) {
                     throw "`'$OSBuildType`' build is not available for $os right now. Please try another build type."
                 }
             }
 
-            $current_iso_name = Get-ChildItem -Path "$local_http_directory\iso" | Where-Object { $_.Name -like "$os*$OSVersionObj*.iso" } | Select-Object -ExpandProperty Name
-            $current_iso_checksum = Get-ChildItem -Path "$local_http_directory\iso\checksums" | Where-Object { $_.Name -like "$os*$OSVersionObj*.txt" } | Select-Object -ExpandProperty Name
+            $current_iso_name = Get-ChildItem -Path "$local_http_directory\iso" | Where-Object { $_.Name -eq "$os-$OSVersionObj-$OSBuildType-$OSArch.iso" } | Select-Object -ExpandProperty Name
+            $current_iso_checksum = Get-ChildItem -Path "$local_http_directory\iso\checksums" | Where-Object { $_.Name -eq "$os-$OSVersionObj-$OSBuildType-$OSArch`_checksum.txt" } | Select-Object -ExpandProperty Name
             
             #There will only ever be one Packer template. This line grabs the template file the user
             #selected and pulls the variable section out of it so we can then set any values here.
@@ -327,7 +327,12 @@ function Build-PackerImage {
                 $packer_data["http_directory"] = "$local_http_directory"
 
                 if ($os -eq "windows") {
-                    $packer_data["secondary_iso_images"] = "$packer_root\$os\unattend\$Firmware\$WindowsSkuObj\answer.iso"
+                    if ($OSBuildType -eq "server") {
+                        $packer_data["secondary_iso_images"] = "$packer_root\$os\unattend\$Firmware\$($CurrentOSObj.OSVersion)\$WindowsSkuObj\answer.iso"
+                    }
+                    else {
+                        $packer_data["secondary_iso_images"] = "$packer_root\$os\unattend\$Firmware\$WindowsSkuObj\answer.iso"
+                    }
                 }
             }
             else {
@@ -341,7 +346,7 @@ function Build-PackerImage {
             Clear-Content -Path "$packer_vars\$($packer_data.vm_name).pkrvars.hcl"
             $packer_data | ConvertTo-Json -Depth 3 | Add-Content -Path "$packer_vars/$($packer_data.vm_name).pkrvars.hcl"
 
-            $packer_data
+            $packer_data | Sort-Object $_.Name
             # Run the build in multiple steps to prevent loss of time in case a build fails somewhere in the middle.
             switch ($BuildStep) {
 
