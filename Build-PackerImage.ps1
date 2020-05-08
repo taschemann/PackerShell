@@ -322,12 +322,14 @@ function Build-PackerImage {
                 $packer_data["iso_checksum"] = "$iso_checksum_local_directory\$current_iso_checksum"
                 $packer_data["iso_checksum_type"] = "file"
                 $packer_data["unattend_file"] = "$PSScriptRoot\$os\unattend\$Firmware\$WindowsSkuObj\autounattend.xml"
-                $packer_data["output_directory"] = "$OutputPath\packer`-$os`-$($CurrentOSObj.OSVersion)`-$($CurrentOSObj.OSType)`-$($CurrentOSObj.OSArch)\{{.Provider}}"
+                $packer_data["output_directory"] = "$OutputPath"
                 $packer_data["firmware"] = "$Firmware"
                 $packer_data["http_directory"] = "$local_http_directory"
 
                 if ($os -eq "windows") {
+                    $packer_data["vm_name"] = "packer-$os-$($CurrentOSObj.OSVersion)-$($CurrentOSObj.OSType)-$($CurrentOSObj.OSArch)-$($WindowsSkuObj)"
                     if ($OSBuildType -eq "server") {
+                        $packer_data["vm_name"] = "packer-$os-$($CurrentOSObj.OSVersion)-$($CurrentOSObj.OSType)-$($WindowsSkuObj)"
                         $packer_data["secondary_iso_images"] = "$packer_root\$os\unattend\$Firmware\$($CurrentOSObj.OSVersion)\$WindowsSkuObj\answer.iso"
                     }
                     else {
