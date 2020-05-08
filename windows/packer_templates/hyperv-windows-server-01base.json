@@ -97,5 +97,12 @@
             "a<enter><wait>a<enter><wait>a<enter><wait>a<enter>"
           ]
         }
+    ],
+
+    "post-processors": [
+      {
+        "output": "{{user `output_directory`}}/{{.Provider}}_{{user `vm_name`}}.box",
+        "type": "vagrant"
+      }
     ]
 }
