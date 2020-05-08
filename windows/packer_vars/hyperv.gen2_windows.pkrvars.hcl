@@ -20,6 +20,7 @@
   "skip_compaction": "false",
   "skip_export": "false",
   "headless": "true",
+  "http_directory": "null",
   "http_port_min": "8000",
   "http_port_max": "9000",
   "shutdown_command": "null",
