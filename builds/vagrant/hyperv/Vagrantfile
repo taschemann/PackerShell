@@ -1,0 +1,66 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "packer-windows-2019-server-SERVERSTANDARD.box"
+  #config.vm.box_url = "http://box.metalixir.net/boxes/windows_SERVERSTANDARD.box"
+  config.vm.hostname = "win2019-dc"
+  config.vm.communicator = "winrm"
+  config.winrm.username = "itadm"
+  config.winrm.password = "itadm"
+
+  # config.vm.box_check_update = false
+  config.vm.network "forwarded_port", guest: 80, host: 8080
+  # config.vm.network "forwarded_port", guest: 80, host: 8080, host_ip: "127.0.0.1"
+  # config.vm.network "private_network", ip: "192.168.33.10"
+  # config.vm.network "public_network"
+
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+
+  config.vm.provider "hyperv" do |hv|
+    hv.auto_start_action = "Nothing"
+    hv.auto_stop_action = "TurnOff"
+    hv.cpus = "2"
+    hv.enable_virtualization_extension = false
+    hv.enable_checkpoints = true
+    hv.enable_automatic_checkpoints = false
+    hv.ip_address_timeout = 120
+    hv.linked_clone = false
+    hv.mac = ""
+    hv.maxmemory = "4096"
+    hv.memory = "2048"
+    hv.vlan_id = ""
+    hv.vmname = ""
+    hv.vm_integration_services = {
+      guest_service_interface: true
+    }
+  end
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.gui = true
+    vb.name = ""
+    vb.default_nic_type = ""
+    vb.linked_clone = false
+  end  
+
+  config.vm.provision "ansible" do |ansible|
+    ansible.playbook = "playbook.yml"
+    ansible.ask_become_pass = false
+    ansible.ask_vault_pass = false
+    ansible.force_remote_user = true
+    ansible.host_key_checking = false
+    ansible.raw_ssh_args = ['']
+  end
+
+  #config.push.define "ftp" do |ftp|
+  #  ftp.host = "ftp.metalixir.net"
+  #  ftp.username = "username"
+  #  ftp.password = "password"
+  #  ftp.passive = true
+  #  ftp.secure = false
+  #  ftp.destination = "/"
+  #  ftp.exclude = ""
+  #  ftp.include = ""
+  #  ftp.dir = "."
+  #end
+end

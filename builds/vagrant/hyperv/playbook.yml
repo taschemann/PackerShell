@@ -1,0 +1,20 @@
+---
+# tasks file for windows_domaincontroller
+- name: Install Domain Controller
+  tasks:
+    - name: Install Windows Server Feature{{':'}} AD-Domain-Services
+      win_feature:
+        name: AD-Domain-Services
+        state: present
+        include_management_tools: true
+        include_sub_features: true
+    - name: Install Domain{{':'}} ad0.metalixir.net
+      win_domain:
+        dns_domain_name: 'ad0.metalixir.net'
+        safe_mode_password: 'itadm'
+      register: ad
+    - name: Reboot Server
+      win_reboot:
+        msg: "Rebooting to continue installation..."
+        pre_boot_delay: 15
+      when: ad.changed
