@@ -15,49 +15,29 @@
                 <Disk wcm:action="add">
                     <CreatePartitions>
                         <CreatePartition wcm:action="add">
-                            <Order>1</Order>
-                            <Size>450</Size>
                             <Type>Primary</Type>
+                            <Order>1</Order>
+                            <Size>350</Size>
                         </CreatePartition>
                         <CreatePartition wcm:action="add">
                             <Order>2</Order>
-                            <Size>100</Size>
-                            <Type>EFI</Type>
-                        </CreatePartition>
-                        <CreatePartition wcm:action="add">
-                            <Order>3</Order>
-                            <Size>16</Size>
-                            <Type>MSR</Type>
-                        </CreatePartition>
-                        <CreatePartition wcm:action="add">
-                            <Extend>true</Extend>
-                            <Order>4</Order>
                             <Type>Primary</Type>
+                            <Extend>true</Extend>
                         </CreatePartition>
                     </CreatePartitions>
                     <ModifyPartitions>
                         <ModifyPartition wcm:action="add">
+                            <Active>true</Active>
                             <Format>NTFS</Format>
-                            <Label>WinRE</Label>
+                            <Label>boot</Label>
                             <Order>1</Order>
                             <PartitionID>1</PartitionID>
-                            <TypeID>DE94BBA4-06D1-4D40-A16A-BFD50179D6AC</TypeID>
-                        </ModifyPartition>
-                        <ModifyPartition wcm:action="add">
-                            <Format>FAT32</Format>
-                            <Label>System</Label>
-                            <Order>2</Order>
-                            <PartitionID>2</PartitionID>
-                        </ModifyPartition>
-                        <ModifyPartition wcm:action="add">
-                            <Order>3</Order>
-                            <PartitionID>3</PartitionID>
                         </ModifyPartition>
                         <ModifyPartition wcm:action="add">
                             <Format>NTFS</Format>
                             <Letter>C</Letter>
-                            <Order>4</Order>
-                            <PartitionID>4</PartitionID>
+                            <Order>2</Order>
+                            <PartitionID>2</PartitionID>
                         </ModifyPartition>
                     </ModifyPartitions>
                     <DiskID>0</DiskID>
@@ -66,16 +46,16 @@
             </DiskConfiguration>
             <ImageInstall>
                 <OSImage>
-                    <InstallTo>
-                        <DiskID>0</DiskID>
-                        <PartitionID>4</PartitionID>
-                    </InstallTo>
                     <InstallFrom>
                         <MetaData wcm:action="add">
-                            <Key>/IMAGE/NAME</Key>
+                            <Key>/IMAGE/NAME </Key>
                             <Value>Windows 10 Enterprise</Value>
                         </MetaData>
                     </InstallFrom>
+                    <InstallTo>
+                        <DiskID>0</DiskID>
+                        <PartitionID>2</PartitionID>
+                    </InstallTo>
                 </OSImage>
             </ImageInstall>
             <UserData>
@@ -199,6 +179,12 @@
                 </SynchronousCommand>
                 <!--
                 <SynchronousCommand wcm:action="add">
+                    <CommandLine>cmd.exe /c winrm quickconfig -q</CommandLine>
+                    <Description>winrm quickconfig -q</Description>
+                    <Order>3</Order>
+                    <RequiresUserInput>true</RequiresUserInput>
+                </SynchronousCommand>
+                <SynchronousCommand wcm:action="add">
                     <CommandLine>powershell -Command "Remove-Item -Path WSMan:\Localhost\listener\listener* -Recurse"</CommandLine>
                     <Order>29</Order>
                     <Description></Description>
@@ -265,10 +251,34 @@
                     <Description>Win RM MaxTimoutms</Description>
                     <RequiresUserInput>true</RequiresUserInput>
                 </SynchronousCommand>
+                <!--
+                <SynchronousCommand wcm:action="add">
+                    <CommandLine>powershell -Command "Set-Item -Path WSMan:\localhost\Shell\MaxMemoryPerShellMB -Value 800"</CommandLine>
+                    <Order>41</Order>
+                    <Description>Win RM MaxTimoutms</Description>
+                </SynchronousCommand>
+                <SynchronousCommand wcm:action="add">
+                    <CommandLine>powershell -Command "Set-NetFirewallRule -DisplayGroup `"Windows Remote Management`" -Enabled True -Profile Any"</CommandLine>
+                    <Order>42</Order>
+                    <Description>Win RM MaxTimoutms</Description>
+                </SynchronousCommand>
+                -->
                 <SynchronousCommand wcm:action="add">
                     <CommandLine>cmd.exe /c netsh advfirewall firewall set rule group="Windows Remote Management" new enable=yes </CommandLine>
                     <Description>WinRM adv firewall enable</Description>
                     <Order>42</Order>
+                    <RequiresUserInput>true</RequiresUserInput>
+                </SynchronousCommand>
+                <SynchronousCommand wcm:action="add">
+                    <CommandLine>cmd.exe /c netsh firewall add portopening TCP 5985 "Port 5985" </CommandLine>
+                    <Description>WinRM port open</Description>
+                    <Order>43</Order>
+                    <RequiresUserInput>true</RequiresUserInput>
+                </SynchronousCommand>
+                <SynchronousCommand wcm:action="add">
+                    <CommandLine>powershell -Command "Stop-Service -Name winrm"</CommandLine>
+                    <Description>Stop WinRM Service </Description>
+                    <Order>44</Order>
                     <RequiresUserInput>true</RequiresUserInput>
                 </SynchronousCommand>
                 <SynchronousCommand wcm:action="add">
@@ -278,8 +288,8 @@
                     <RequiresUserInput>true</RequiresUserInput>
                 </SynchronousCommand>
                 <SynchronousCommand wcm:action="add">
-                    <CommandLine>powershell -Command "Restart-Service -Name winrm"</CommandLine>
-                    <Description>Restart WinRM Service</Description>
+                    <CommandLine>powershell -Command "Start-Service -Name winrm"</CommandLine>
+                    <Description>Start WinRM Service</Description>
                     <Order>46</Order>
                     <RequiresUserInput>true</RequiresUserInput>
                 </SynchronousCommand>
@@ -294,3 +304,4 @@
     </settings>
     <cpi:offlineImage cpi:source="catalog:h:/packershell/windows/unattend/.catalogs/install_windows 10 enterprise.clg" xmlns:cpi="urn:schemas-microsoft-com:cpi" />
 </unattend>
+
