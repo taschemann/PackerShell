@@ -2,7 +2,7 @@
 # vi: set ft=ruby :
 
 Vagrant.configure("2") do |config|
-  config.vm.box = "packer-windows-2019-server-SERVERSTANDARD.box"
+  config.vm.box = "packer-windows-2019-server-x64-SERVERSTANDARD.box"
   #config.vm.box_url = "http://box.metalixir.net/boxes/windows_SERVERSTANDARD.box"
   config.vm.hostname = "win2019-dc"
   config.vm.communicator = "winrm"
